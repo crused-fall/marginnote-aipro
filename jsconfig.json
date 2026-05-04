@@ -1,0 +1,3 @@
+{
+  "include": ["main.js", "index.d.ts"]
+}

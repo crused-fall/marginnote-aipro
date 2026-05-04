@@ -1,0 +1,59 @@
+{
+  "name": "marginnote-aipro",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Starter for an agent-style MarginNote plugin with a local planning bridge.",
+  "main": "plugin/index.js",
+  "bin": {
+    "mnaipro": "./bin/mnaipro.js"
+  },
+  "scripts": {
+    "bridge": "node bridge/server.js",
+    "bridge:supervisor": "node scripts/bridge-supervisor.js",
+    "bridge:launchd:render": "node scripts/render-launch-agent.js",
+    "bridge:launchd:reload": "node scripts/reload-launch-agent.js",
+    "bridge:supervisor:check": "node scripts/check-bridge-supervisor-managed-stop.js",
+    "cli:link": "npm link",
+    "native-ai:inspect": "node scripts/inspect-native-ai.js",
+    "native-ai:matrix": "node scripts/inspect-native-ai-matrix.js",
+    "native-ai:templates": "node scripts/inspect-native-ai-templates.js",
+    "native-ai:template-check": "node scripts/check-native-ai-template-governance.js",
+    "native-ai:breakdown-postprocess": "node scripts/inspect-native-ai-breakdown-postprocess.js",
+    "native-ai:breakdown-artifacts": "node scripts/inspect-native-ai-breakdown-artifacts.js",
+    "native-ai:breakdown-check": "node scripts/check-native-ai-breakdown-postprocess.js",
+    "native-ai:breakdown-artifacts-check": "node scripts/check-native-ai-breakdown-artifacts.js",
+    "bridge:status:breakdown-check": "node scripts/check-bridge-status-breakdown-surface.js",
+    "cli:breakdown-audit-surface-check": "node scripts/check-cli-breakdown-audit-surface.js",
+    "native-ai:breakdown-origin-check": "node scripts/check-main-breakdown-origin.js",
+    "native-ai:breakdown-smoke": "node scripts/check-native-ai-breakdown-smoke.js",
+    "native-ai:breakdown-smoke:live": "node scripts/check-native-ai-breakdown-smoke.js --bridge-base-url http://127.0.0.1:8765",
+    "native-ai:breakdown-smoke:visible": "node scripts/check-native-ai-breakdown-smoke.js --case visible",
+    "native-ai:breakdown-smoke:organized-enough": "node scripts/check-native-ai-breakdown-smoke.js --case organized-enough",
+    "native-ai:breakdown-smoke:json": "node scripts/check-native-ai-breakdown-smoke.js --json",
+    "dry-run": "node scripts/dry-run.js",
+    "planner:check": "node scripts/check-planner-invariants.js",
+    "plan:latest": "node scripts/inspect-latest-plan.js",
+    "followup:latest": "node scripts/inspect-latest-followup.js",
+    "followup:apply:latest": "node scripts/inspect-latest-followup-apply.js",
+    "report:latest": "node scripts/inspect-latest-apply.js",
+    "diag:latest": "node scripts/inspect-latest-diagnostic.js",
+    "bridge:status": "node scripts/bridge-status.js",
+    "bridge:doctor": "node scripts/bridge-doctor.js",
+    "cli:smoke": "node scripts/check-cli-smoke.js",
+    "cli:smoke:json": "node scripts/check-cli-smoke.js --json",
+    "cli:smoke:compact": "node scripts/check-cli-smoke.js --compact",
+    "replay:latest": "node scripts/replay-requests.js --latest",
+    "replay:after-apply": "node scripts/replay-after-apply.js",
+    "replay:all": "node scripts/replay-requests.js --all",
+    "check": "node --check main.js && node --check bridge/planner.js && node --check bridge/server.js && node --check bridge/obsidian-sync.js && node --check bridge/native-ai-supervision.js && node --check bridge/native-ai-template-governance.js && node --check bridge/native-ai-breakdown-postprocess.js && node --check bridge/breakdown-artifact-audit.js && node --check plugin/agent-core.js && node --check plugin/index.js && node --check plugin/mock-api.js && node --check cli/mnaipro.js && node --check bin/mnaipro.js && node --check scripts/dry-run.js && node --check scripts/check-planner-invariants.js && node --check scripts/inspect-latest-plan.js && node --check scripts/inspect-latest-followup.js && node --check scripts/inspect-latest-followup-apply.js && node --check scripts/inspect-latest-apply.js && node --check scripts/inspect-latest-diagnostic.js && node --check scripts/inspect-native-ai.js && node --check scripts/inspect-native-ai-matrix.js && node --check scripts/inspect-native-ai-templates.js && node --check scripts/check-native-ai-template-governance.js && node --check scripts/inspect-native-ai-breakdown-postprocess.js && node --check scripts/inspect-native-ai-breakdown-artifacts.js && node --check scripts/check-native-ai-breakdown-postprocess.js && node --check scripts/check-native-ai-breakdown-artifacts.js && node --check scripts/check-native-ai-breakdown-smoke.js && node --check scripts/check-bridge-status-breakdown-surface.js && node --check scripts/check-cli-breakdown-audit-surface.js && node --check scripts/check-main-breakdown-origin.js && node --check scripts/check-cli-smoke.js && node --check scripts/check-bridge-supervisor-managed-stop.js && node --check scripts/bridge-status.js && node --check scripts/bridge-doctor.js && node --check scripts/reload-launch-agent.js && node --check scripts/replay-requests.js && node --check scripts/replay-after-apply.js && npm run planner:check && npm run native-ai:template-check && npm run native-ai:breakdown-check && npm run native-ai:breakdown-artifacts-check && npm run native-ai:breakdown-smoke && npm run bridge:supervisor:check && npm run bridge:status:breakdown-check && npm run cli:breakdown-audit-surface-check && npm run native-ai:breakdown-origin-check",
+    "addon:build": "./node_modules/.bin/mnaddon4 build mnaipro",
+    "addon:watch": "./node_modules/.bin/mnaddon4 watch",
+    "addon:dev": "./node_modules/.bin/mnaddon4 dev"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "mnaddon4": "^1.2.6"
+  }
+}
