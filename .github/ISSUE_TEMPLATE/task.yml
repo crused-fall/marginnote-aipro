@@ -1,0 +1,59 @@
+name: Task
+description: Track a scoped unit of work.
+labels:
+  - type:task
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repository does this belong to?
+      options:
+        - addon
+        - cli
+        - bridge
+        - docs
+        - workflow
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this task is done?
+      placeholder: Describe the intended outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What should change, and what should stay unchanged?
+      placeholder: List the files, commands, or behavior in scope.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: What must be true before this can be closed?
+      placeholder: Write explicit acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: How should the work be verified?
+      placeholder: List the exact checks or commands.
+    validations:
+      required: true
+  - type: textarea
+    id: memory
+    attributes:
+      label: Memory impact
+      description: What durable decisions need to be recorded?
+      placeholder: Mention updates to PROJECT_MEMORY.md or PROJECT_STATUS.md.
+    validations:
+      required: true
+

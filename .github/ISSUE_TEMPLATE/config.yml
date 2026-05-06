@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project memory
+    url: https://github.com/crused-fall/marginnote-aipro/blob/main/PROJECT_MEMORY.md
+    about: Read the durable project decisions before opening a new issue.
+  - name: Project status
+    url: https://github.com/crused-fall/marginnote-aipro/blob/main/PROJECT_STATUS.md
+    about: Read the current phase and open work before starting a new task.
+

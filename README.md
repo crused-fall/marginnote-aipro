@@ -44,6 +44,15 @@ It is split into two parts:
 - `docs/native-ai-supervision-matrix.md`
   A v1 decision matrix for which native MarginNote AI capabilities we should mirror, supervise, augment, or avoid hooking directly.
 
+## GitHub workflow
+
+This repository uses `main` as the merge branch.
+Small, verified fixes can land directly on `main`; larger slices should use a short-lived branch and a Draft PR.
+GitHub issues and PRs track collaboration state only.
+Long-term project memory lives in `PROJECT_MEMORY.md`, current phase tracking lives in `PROJECT_STATUS.md`, and repo-specific operating rules live in `AGENTS.md`.
+
+For validation, use `npm run check:ci` for the CI-safe subset and `npm run check` for the broader local suite.
+
 ## Why this split exists
 
 MarginNote addons can inspect notes and modify several note fields, but they are not a full general-purpose agent runtime. A local bridge gives you:

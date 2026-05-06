@@ -1,0 +1,59 @@
+name: Feature
+description: Request a new capability or expansion.
+labels:
+  - type:feature
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repository should this affect?
+      options:
+        - addon
+        - cli
+        - bridge
+        - docs
+        - workflow
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What limitation or gap are we trying to solve?
+      placeholder: Describe the user or operator pain point.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should the new capability do?
+      placeholder: Describe the desired behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: How will we know this feature is done?
+      placeholder: Write explicit success criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: What checks should prove the feature works?
+      placeholder: List commands, tests, or manual checks.
+    validations:
+      required: true
+  - type: textarea
+    id: memory
+    attributes:
+      label: Memory impact
+      description: What durable decisions should be recorded?
+      placeholder: Mention PROJECT_MEMORY.md and PROJECT_STATUS.md updates.
+    validations:
+      required: true
+
