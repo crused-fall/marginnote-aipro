@@ -275,7 +275,7 @@ If you are validating the live addon wiring, run:
 npm run native-ai:breakdown-origin-check
 ```
 
-That source-level regression asserts both helper-blocked and normal apply envelopes in [`main.js`](/Users/cfall/Documents/Programs/Marginnote-AIpro/main.js) preserve `command`, `objective`, and `origin`, so Breakdown runs cannot silently collapse back into generic branch-organization apply artifacts.
+That source-level regression asserts both helper-blocked and normal apply envelopes in [`main.js`](main.js) preserve `command`, `objective`, and `origin`, so Breakdown runs cannot silently collapse back into generic branch-organization apply artifacts.
 
 Inspect bridge status and the latest artifact pointers through the local HTTP API:
 
@@ -301,8 +301,10 @@ The smoke now also checks each standalone CLI's `capabilities` registry command 
 
 If you want to verify each standalone CLI on its own, run these repo-local smoke entrypoints directly:
 
-- `cd ~/Documents/Programs/marginnote-cli && npm run smoke`
-- `cd ~/Documents/Programs/MN-Obsidian-bridge && npm run smoke`
+- `cd "$MARGINNOTE_CLI_ROOT" && npm run smoke`
+- `cd "$MN_OBSIDIAN_BRIDGE_ROOT" && npm run smoke`
+
+If those environment variables are not set, substitute your local checkout path.
 
 Those per-repo smoke commands use temporary domains / temporary vaults, so they can exercise real read-write behavior without touching your everyday settings.
 

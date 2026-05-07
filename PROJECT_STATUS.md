@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Current phase
 - GitHub governance skeleton adoption.
@@ -15,13 +15,12 @@ Last updated: 2026-05-06
 - GitHub issue templates, pull request template, and CI workflow are in place.
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
 - The core GitHub label set has been created.
-- Open backlog items now exist for public-doc path cleanup and release packaging.
+- One open backlog item remains for release packaging.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Resolve issue #2: normalize public docs away from machine-specific paths.
 - Resolve issue #3: add release packaging workflow for `.mnaddon` builds.
-- Decide whether the draft governance PR should be marked ready once those follow-up items are either merged or explicitly deferred.
+- Decide whether the draft governance PR should be marked ready once the release packaging path is either merged or explicitly deferred.
 
 ## Last validated locally
 - `node --check scripts/check-ci.js`
