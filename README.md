@@ -50,6 +50,7 @@ This repository uses `main` as the merge branch.
 Small, verified fixes can land directly on `main`; larger slices should use a short-lived branch and a Draft PR.
 GitHub issues and PRs track collaboration state only.
 Long-term project memory lives in `PROJECT_MEMORY.md`, current phase tracking lives in `PROJECT_STATUS.md`, and repo-specific operating rules live in `AGENTS.md`.
+See `CONTRIBUTING.md` for the contributor workflow in one place.
 
 For validation, use `npm run check:ci` for the CI-safe subset and `npm run check` for the broader local suite.
 
@@ -407,6 +408,8 @@ To build a real `.mnaddon` package:
 ```bash
 npm run addon:build
 ```
+
+The generated `.mnaddon` archive is a local build artifact and is ignored by git.
 
 ## Local bridge diagnostics API
 

@@ -13,14 +13,15 @@ Last updated: 2026-05-06
 - Long-term memory now has a dedicated `PROJECT_MEMORY.md`.
 - Current phase tracking now has a dedicated `PROJECT_STATUS.md`.
 - GitHub issue templates, pull request template, and CI workflow are in place.
+- Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
 - The core GitHub label set has been created.
+- Open backlog items now exist for public-doc path cleanup and release packaging.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Add GitHub issue templates for task / feature / bug intake.
-- Add a pull request template that checks memory and status updates.
-- Add a GitHub Actions workflow that runs the CI-safe repository checks.
-- Create and standardize the project label set.
+- Resolve issue #2: normalize public docs away from machine-specific paths.
+- Resolve issue #3: add release packaging workflow for `.mnaddon` builds.
+- Decide whether the draft governance PR should be marked ready once those follow-up items are either merged or explicitly deferred.
 
 ## Last validated locally
 - `node --check scripts/check-ci.js`
