@@ -3,8 +3,8 @@
 Last updated: 2026-05-07
 
 ## Current phase
-- GitHub governance skeleton adoption.
-- The repository now uses a `main`-as-merge-branch model with branch-and-Draft-PR support for larger slices.
+- GitHub governance baseline complete.
+- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.
@@ -15,13 +15,14 @@ Last updated: 2026-05-07
 - GitHub issue templates, pull request template, and CI workflow are in place.
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
 - The core GitHub label set has been created.
-- The governance skeleton branch has a ready-for-review PR (#1).
+- The governance skeleton branch was merged through PR #1.
 - The release-addon workflow now packages `.mnaddon` builds as artifacts and GitHub Release assets on tag pushes.
 - Issue #3 is closed after implementing the release packaging workflow and documenting the release path.
+- No open GitHub issues remain.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Decide whether the draft governance PR should be marked ready once the release packaging path is either merged or explicitly deferred.
+- Choose the next product slice now that the governance baseline is complete.
 
 ## Last validated locally
 - `git diff --check`
