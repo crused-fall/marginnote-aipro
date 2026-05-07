@@ -50,6 +50,50 @@ function normalizationSuggestions(templates) {
   return suggestions;
 }
 
+function buildPatchExport(templates) {
+  const proposals = [];
+
+  templates.forEach((template) => {
+    (template.fields || []).forEach((field, fieldIndex) => {
+      if (!field || !field.enabled) return;
+
+      const originalPrompt = typeof field.prompt === "string" ? field.prompt : "";
+      const normalizedPrompt = normalizePrompt(originalPrompt);
+      if (!originalPrompt || normalizedPrompt === originalPrompt) return;
+
+      proposals.push({
+        key: `template-${template.index}-field-${fieldIndex}-prompt`,
+        op: "replace",
+        path: `templates[${template.index}].fields[${fieldIndex}].prompt`,
+        templateIndex: template.index,
+        fieldIndex,
+        fieldType: field.type,
+        templateKind: template.kind || "unknown",
+        deepMode: !!template.deepMode,
+        before: originalPrompt,
+        after: normalizedPrompt,
+        reason: "normalize_whitespace",
+        safe: true
+      });
+    });
+  });
+
+  const affectedTemplateIndexes = Array.from(
+    new Set(proposals.map((proposal) => proposal.templateIndex))
+  ).sort((left, right) => left - right);
+
+  return {
+    format: "template-patch-proposal-v1",
+    safeOnly: true,
+    summary: {
+      proposalCount: proposals.length,
+      affectedTemplateCount: affectedTemplateIndexes.length,
+      affectedTemplateIndexes
+    },
+    proposals
+  };
+}
+
 function qualityFindings(templates) {
   const findings = [];
 
@@ -219,6 +263,7 @@ function analyzeTemplates(templates) {
     normalizationSuggestions: normalization,
     qualityFindings: quality,
     templateDiffs: diffs,
+    patchExport: buildPatchExport(normalizedTemplates),
     recommendations: summarizeRecommendations(
       normalizedTemplates,
       quality,
@@ -231,5 +276,6 @@ function analyzeTemplates(templates) {
 module.exports = {
   analyzeTemplates,
   buildTemplateFingerprint,
+  buildPatchExport,
   normalizePrompt
 };

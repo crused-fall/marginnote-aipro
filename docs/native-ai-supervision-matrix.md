@@ -103,6 +103,9 @@ v1 的监督层是一个确定性策略模块，不是 UI，也不是私有调�
 npm run native-ai:templates
 ```
 
+That command now also exports a deterministic `patchExport` proposal surface for whitespace-only prompt normalization.
+The export is preview-only and read-only; semantic findings still stay in warnings and recommendations instead of becoming patches.
+
 它会读取本机 AI OCR 模板配置，输出：
 
 - 每个模板的字段镜像

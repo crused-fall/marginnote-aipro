@@ -22,8 +22,10 @@ It is split into two parts:
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
-  - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
-  - `mn-obsidian-bridge` is the standalone read-write CLI for MarginNote ↔ Obsidian bridge diagnostics, including a stable `capabilities` registry command, a top-level `overview` evidence map, higher-level doctor/report evidence for Obsidian sync settings, plus patch-compatible or restorable settings snapshots and supported `ob settings export|restore|set|patch|reset` flows.
+  - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
+  - `marginnote-cli overview` gives a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
+  - `marginnote-cli capabilities` and `marginnote-cli --help` now share the same `surfaceDocs` catalog.
+  - `mn-obsidian-bridge` is the standalone read-write CLI for MarginNote ↔ Obsidian bridge diagnostics, including a stable `capabilities` registry command, a top-level `overview` evidence map, a shared `surfaceDocs` command-surface catalog, higher-level doctor/report evidence for Obsidian sync settings, plus patch-compatible or restorable settings snapshots and supported `ob settings export|restore|set|patch|reset` flows.
   - `marginnote-cli ai status` gives a compact native-AI health summary.
   - `marginnote-cli ai status --compact` also gives a short `next=` hint for the supported snapshot / restore workflow.
   - `marginnote-cli ai overview` gives a top-level native-AI capability map across prompts, study, memory, traces, OCR, and Breakdown.
@@ -211,7 +213,8 @@ mnaipro capabilities
 mnaipro capabilities --json
 ```
 
-That registry mirrors the live commander tree, so it stays aligned with the actual `mnaipro` subcommands instead of relying on hand-maintained docs.
+That registry mirrors the live commander tree and now also exposes the curated `surfaceDocs` catalog shared with `mnaipro --help`, so the actual `mnaipro` subcommands and the top-level help footer stay aligned instead of relying on hand-maintained docs.
+The same surface now includes a first-class `mnaipro overview` entry, which gives a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
 
 Inspect the locally installed MarginNote 4 app for repeatable evidence of native AI prompt modules, tool contracts, UI signals, preferences, and container traces:
 
@@ -235,6 +238,10 @@ Mirror the local AI OCR / card templates and run a first structural lint pass:
 npm run native-ai:templates
 ```
 
+This report now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization.
+The patch export is preview-only and does not write back to MarginNote.
+Semantic template issues still remain warnings and recommendations, not patch proposals.
+
 Preview how the current organizer would post-process a branch treated as native AI Breakdown output:
 
 ```bash
@@ -253,11 +260,12 @@ The same preview is also available through the thin CLI wrapper:
 ```bash
 mnaipro breakdown postprocess
 mnaipro breakdown postprocess --json
+mnaipro breakdown postprocess --live-only --json
 mnaipro breakdown artifacts
 mnaipro breakdown artifacts --json
 ```
 
-That wrapper now prefers the latest `origin = native_ai_breakdown` apply report, then falls back to the latest Breakdown request, then the latest Breakdown plan report. If the selected source is a plan report, it also reuses the paired request snapshot for node replay, while still showing the plan artifact as the primary source. If no Breakdown artifacts exist at all, the wrapper now returns a structured `no_breakdown_artifacts` report in JSON mode and includes the newest ordinary request/plan/apply evidence, which makes it easier to see that the local cache is still only capturing primary-mode runs.
+That wrapper now prefers the latest `origin = native_ai_breakdown` apply report, then falls back to the latest Breakdown request, then the latest Breakdown plan report. If the selected source is a plan report, it also reuses the paired request snapshot for node replay, while still showing the plan artifact as the primary source. If no Breakdown artifacts exist, the wrapper now falls back to the latest apply report's `afterBranch` snapshot when one is available; only when that proxy input is also missing does it return a structured `no_breakdown_artifacts` report in JSON mode and include the newest ordinary request/plan/apply evidence. If you want to require dedicated Breakdown artifacts and skip the proxy fallback, use `--live-only`.
 `mnaipro breakdown postprocess` now also carries a `nextCommand` hint that points to `mnaipro breakdown artifacts --json`, so the preview surface explicitly points at the companion cache-audit command in both JSON and compact modes.
 
 If you need to audit the cache itself rather than replay a branch, run:
@@ -323,6 +331,7 @@ Install the local command-line wrapper and inspect its command surface:
 ```bash
 npm link
 mnaipro --help
+mnaipro overview --json
 mnaipro status --obsidian-vault-path /path/to/vault
 mnaipro doctor
 mnaipro bridge doctor
@@ -346,6 +355,7 @@ The CLI currently exposes:
 - `mnaipro bridge render`
 - `mnaipro bridge reload`
 - `mnaipro bridge logs`
+- `mnaipro overview`
 - `mnaipro status`
 - `mnaipro doctor`
 - `mnaipro plan latest`

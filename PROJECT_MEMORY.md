@@ -23,7 +23,13 @@ Canonical long-term memory for this repository.
 
 ## Durable technical decisions
 - `mnaipro breakdown smoke` defaults to self-hosted mode and can reuse an explicit bridge via `--bridge-base-url` or `--base-url` before or after the subcommand.
-- `mnaipro capabilities` exposes the current `mnaipro` command registry and capability groups in a stable JSON/text shape.
+- `mnaipro capabilities` exposes the current `mnaipro` command registry, capability groups, and the shared `surfaceDocs` catalog used by `mnaipro --help` in a stable JSON/text shape.
+- `mnaipro overview` is the top-level workflow evidence map for the plugin/agent CLI, combining status, doctor, capabilities, and Breakdown evidence in one stable report.
+- `mnaipro breakdown postprocess` falls back to the latest apply report's `afterBranch` snapshot as a proxy input when no dedicated Breakdown artifacts exist, and also exposes a `--live-only` mode that disables that proxy path when we need to compare against true Breakdown artifacts only.
+- `marginnote-cli overview` is the top-level MarginNote-native evidence map, combining app inspection, doctor, AI overview, and capabilities in one stable report.
+- `marginnote-cli capabilities` now also exposes a shared `surfaceDocs` command-surface catalog so `capabilities` and `--help` stay aligned.
+- `mn-obsidian-bridge capabilities` and `mn-obsidian-bridge --help` now share a `surfaceDocs` command-surface catalog so the bridge help footer stays aligned with the live registry.
+- `npm run native-ai:templates` now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization; it is preview-only and does not write back to MarginNote, while semantic findings remain warnings/recommendations rather than patches.
 - `npm run check` remains the broad local validation command.
 - `npm run check:ci` is the CI-safe subset used by GitHub Actions.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
