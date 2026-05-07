@@ -1612,6 +1612,7 @@ function bridgeHelpFooter() {
     "Raw bridge access:",
     "  GET:          mnaipro request get /status",
     "  POST:         mnaipro request post /model/run --body '{\"dryRun\":true}'",
+    "  REPLAY:       mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
   ].join("\n");
 }
 
@@ -1659,7 +1660,7 @@ function buildCommandSurfaceDocs() {
       {
         label: "Raw access",
         prefix: "mnaipro request",
-        commands: ["get /status", "post /model/run"],
+        commands: ["get /status", "post /model/run", "post /model/replay"],
         summary: "Raw bridge request passthrough for read and execute surfaces.",
       },
     ],
@@ -1681,6 +1682,7 @@ function buildCommandSurfaceDocs() {
       "mnaipro breakdown artifacts --json",
       "mnaipro request get /model/latest",
       "mnaipro request post /model/run --body '{\"dryRun\":true}'",
+      "mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
     ],
   };
 }
