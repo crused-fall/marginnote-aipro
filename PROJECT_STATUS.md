@@ -16,6 +16,7 @@ Last updated: 2026-05-07
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
 - The core GitHub label set has been created.
 - One open backlog item remains for release packaging.
+- The governance skeleton branch has a ready-for-review PR (#1).
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
