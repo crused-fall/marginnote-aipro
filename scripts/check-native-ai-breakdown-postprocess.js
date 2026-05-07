@@ -390,6 +390,127 @@ function assertLatestBreakdownPlanSelection() {
   }
 }
 
+function assertLatestApplyAfterBranchProxySelection() {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mnaipro-breakdown-postprocess-"));
+  const reportsDir = path.join(tempDir, "reports");
+  const inspector = path.join(__dirname, "inspect-native-ai-breakdown-postprocess.js");
+
+  fs.mkdirSync(reportsDir, { recursive: true });
+
+  const genericApply = path.join(reportsDir, "mnaipro-2000000000020-333333-apply-2000000000025.json");
+
+  try {
+    writeJsonFile(genericApply, {
+      origin: "organize_current_branch",
+      command: "整理当前选中分支",
+      actionCount: 1,
+      results: [
+        {
+          ok: true,
+          type: "set_color_index",
+          noteId: "bd-root"
+        }
+      ],
+      afterBranch: {
+        notes: sampleNodes()
+      }
+    });
+
+    const result = spawnSync(process.execPath, [inspector, "--json"], {
+      cwd: path.resolve(__dirname, ".."),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MN_AGENT_REPORTS_DIR: reportsDir
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 10 * 1024 * 1024
+    });
+
+    assert.strictEqual(result.status, 0, `inspector exited with ${result.status}: ${result.stderr || result.stdout}`);
+    const report = JSON.parse(result.stdout);
+    assert.strictEqual(
+      report.source,
+      "latest_apply_after_branch_proxy",
+      `expected after-apply proxy source selection, got: ${report.source}`
+    );
+    assert.strictEqual(report.path, genericApply, `expected inspector to inspect the proxy apply report, got: ${report.path}`);
+    assert.strictEqual(report.snapshotPath, genericApply, `expected proxy snapshot path to match the apply report, got: ${report.snapshotPath}`);
+    assert(report.sourceProxy, "expected sourceProxy summary");
+    assert.strictEqual(report.sourceProxy.file, path.basename(genericApply), `unexpected proxy apply file: ${report.sourceProxy && report.sourceProxy.file}`);
+    assert.strictEqual(report.sourceProxy.origin, "organize_current_branch", `unexpected proxy origin: ${report.sourceProxy && report.sourceProxy.origin}`);
+    assert.strictEqual(
+      report.sourceSelectionMode,
+      "proxy_after_branch",
+      `unexpected proxy selection mode: ${report.sourceSelectionMode}`
+    );
+    assert.strictEqual(report.summary.origin, "native_ai_breakdown", `expected native_ai_breakdown origin, got: ${report.summary && report.summary.origin}`);
+    assert(report.summary.primaryStrategyPack, "expected primary strategy pack");
+    assert.strictEqual(
+      report.summary.primaryStrategyPack.type,
+      "visual_branch_strategy",
+      `expected proxy preview to surface a visible visual strategy, got: ${report.summary.primaryStrategyPack.type}`
+    );
+    assert(
+      Array.isArray(report.actions) && report.actions.length > 0,
+      "expected proxy preview to generate actions"
+    );
+    assert.strictEqual(report.nextCommand, EXPECTED_NEXT_COMMAND, `unexpected next command: ${report.nextCommand}`);
+
+    const liveOnlyResult = spawnSync(process.execPath, [inspector, "--json", "--live-only"], {
+      cwd: path.resolve(__dirname, ".."),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MN_AGENT_REPORTS_DIR: reportsDir
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 10 * 1024 * 1024
+    });
+
+    assert.strictEqual(
+      liveOnlyResult.status,
+      0,
+      `live-only inspector exited with ${liveOnlyResult.status}: ${liveOnlyResult.stderr || liveOnlyResult.stdout}`
+    );
+    const liveOnlyReport = JSON.parse(liveOnlyResult.stdout);
+    assert.strictEqual(
+      liveOnlyReport.ok,
+      false,
+      `expected live-only fallback report to set ok=false, got: ${liveOnlyReport.ok}`
+    );
+    assert.strictEqual(
+      liveOnlyReport.error,
+      "no_breakdown_artifacts",
+      `unexpected live-only error: ${liveOnlyReport.error}`
+    );
+
+    const liveOnlyCompactResult = spawnSync(process.execPath, [inspector, "--compact", "--live-only"], {
+      cwd: path.resolve(__dirname, ".."),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MN_AGENT_REPORTS_DIR: reportsDir
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 10 * 1024 * 1024
+    });
+
+    assert.strictEqual(
+      liveOnlyCompactResult.status,
+      0,
+      `live-only compact inspector exited with ${liveOnlyCompactResult.status}: ${liveOnlyCompactResult.stderr || liveOnlyCompactResult.stdout}`
+    );
+    assert(
+      /selection=live_breakdown/.test(liveOnlyCompactResult.stdout || "") &&
+        /error=no_breakdown_artifacts/.test(liveOnlyCompactResult.stdout || ""),
+      `expected live-only compact output to include live_breakdown selection, got:\n${liveOnlyCompactResult.stdout}`
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 function assertNoBreakdownArtifactsDiagnostic() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mnaipro-breakdown-postprocess-"));
   const reportsDir = path.join(tempDir, "reports");
@@ -429,17 +550,7 @@ function assertNoBreakdownArtifactsDiagnostic() {
     writeJsonFile(genericApply, {
       origin: "",
       command: "整理当前选中分支",
-      actionCount: 1,
-      results: [
-        {
-          ok: true,
-          type: "set_color_index",
-          noteId: "bd-root"
-        }
-      ],
-      afterBranch: {
-        notes: sampleNodes()
-      }
+      actionCount: 1
     });
 
     const result = spawnSync(process.execPath, [inspector, "--json"], {
@@ -488,6 +599,7 @@ function assertNoBreakdownArtifactsDiagnostic() {
       `compact inspector exited with ${compactResult.status}: ${compactResult.stderr || compactResult.stdout}`
     );
     assert(
+      /selection=proxy_after_branch/.test(compactResult.stdout || "") &&
       /next=mnaipro breakdown artifacts --json/.test(compactResult.stdout || ""),
       `expected compact output to include next command, got:\n${compactResult.stdout}`
     );

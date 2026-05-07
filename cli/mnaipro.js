@@ -956,8 +956,27 @@ function normalizeAfterBranchNotes(report) {
 
 async function handleStatus(options) {
   const statusInfo = await readStatus(options.baseUrl || DEFAULT_BASE_URL);
+  const payload = buildStatusReport(statusInfo, options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH);
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+  if (options.compact) {
+    const followupApplyRequest = payload.latestFollowupApply
+      ? payload.latestFollowupApply.requestId || "unknown"
+      : "none";
+    const supervisorState = payload.supervisorState || null;
+    outputText(
+      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
+    );
+    return;
+  }
+  outputJson(payload);
+}
+
+function buildStatusReport(statusInfo, obsidianVaultPath) {
   const obsidianSyncSettings = summarizeObsidianSyncSettings(
-    options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH
+    obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH
   );
   const breakdownArtifacts =
     (statusInfo.payload &&
@@ -982,21 +1001,7 @@ async function handleStatus(options) {
     obsidianSyncSettings,
     obsidianVaultPath: obsidianSyncSettings.vaultPath,
   };
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-  if (options.compact) {
-    const followupApplyRequest = payload.latestFollowupApply
-      ? payload.latestFollowupApply.requestId || "unknown"
-      : "none";
-    const supervisorState = payload.supervisorState || null;
-    outputText(
-      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${breakdownArtifacts.status || "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${obsidianSyncSettings.exists ? "present" : "missing"}`
-    );
-    return;
-  }
-  outputJson(payload);
+  return payload;
 }
 
 async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
@@ -1108,6 +1113,154 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
   };
 }
 
+function buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport) {
+  const breakdownStatus = statusReport.breakdownArtifacts ? statusReport.breakdownArtifacts.status || "unknown" : "unknown";
+  const followupApply = statusReport.latestFollowupApply || null;
+  const obsidianSettings = statusReport.obsidianSyncSettings || null;
+  const surfaces = [
+    {
+      key: "status",
+      label: "Bridge status",
+      present: true,
+      summary: statusReport.summary || "Bridge status is unavailable.",
+      evidence: [
+        `source:${statusReport.source || "unknown"}`,
+        `breakdown:${breakdownStatus}`,
+        `followup_apply:${followupApply ? "present" : "missing"}`,
+      ],
+      nextCommand: "mnaipro status --json",
+    },
+    {
+      key: "doctor",
+      label: "Bridge doctor",
+      present: true,
+      summary: doctorReport.summary || "Bridge doctor is unavailable.",
+      evidence: [
+        `source:${doctorReport.source || "unknown"}`,
+        `warnings:${Array.isArray(doctorReport.warnings) ? doctorReport.warnings.length : 0}`,
+        `missing:${Array.isArray(doctorReport.missing) ? doctorReport.missing.length : 0}`,
+      ],
+      nextCommand: "mnaipro doctor --json",
+    },
+    {
+      key: "capabilities",
+      label: "Command surface",
+      present: true,
+      summary: capabilitiesReport.summary || "Command surface is unavailable.",
+      evidence: [
+        `commands:${capabilitiesReport.commandCount || 0}`,
+        `groups:${capabilitiesReport.groupCount || 0}`,
+        `top_level:${capabilitiesReport.topLevelCount || 0}`,
+      ],
+      nextCommand: "mnaipro capabilities --json",
+    },
+    {
+      key: "breakdown",
+      label: "Breakdown audit",
+      present: true,
+      summary:
+        breakdownStatus === "complete"
+          ? "Breakdown artifacts are complete."
+          : `Breakdown artifacts are ${breakdownStatus}.`,
+      evidence: [
+        `next:${statusReport.breakdownNextCommand || "unknown"}`,
+        `status:${breakdownStatus}`,
+      ],
+      nextCommand: statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
+    },
+    {
+      key: "obsidian_settings",
+      label: "Obsidian settings",
+      present: true,
+      summary: obsidianSettings && obsidianSettings.exists
+        ? obsidianSettings.summary || "Obsidian sync settings are visible."
+        : "Obsidian sync settings are missing.",
+      evidence: [
+        obsidianSettings && obsidianSettings.settingsPath
+          ? `settings_path:${obsidianSettings.settingsPath}`
+          : "settings_path:missing",
+      ],
+      nextCommand: "mn-obsidian-bridge ob settings export ./ob-settings.snapshot.json --snapshot",
+    },
+  ];
+
+  return {
+    surfaces,
+    visibleCount: surfaces.filter((surface) => surface.present).length,
+    totalCount: surfaces.length,
+    missing: surfaces.filter((surface) => !surface.present).map((surface) => surface.key),
+  };
+}
+
+async function buildOverviewReport(program, options = {}) {
+  const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
+  const obsidianVaultPath = options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH;
+  const statusInfo = await readStatus(baseUrl);
+  const statusReport = buildStatusReport(statusInfo, obsidianVaultPath);
+  const doctorReport = await buildDoctorSummary(baseUrl, obsidianVaultPath);
+  const capabilitiesReport = buildCapabilitiesReport(program);
+  const surfaceState = buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport);
+  const highlightState = {
+    bridgeLive: statusReport.source === "live_http",
+    bridgeReachable: !doctorReport.bridgeOffline,
+    capabilitiesVisible: !!capabilitiesReport,
+    breakdownComplete: statusReport.breakdownArtifacts && statusReport.breakdownArtifacts.status === "complete",
+    followupApplyVisible: !!statusReport.latestFollowupApply,
+    obsidianSettingsVisible: !!(statusReport.obsidianSyncSettings && statusReport.obsidianSyncSettings.exists),
+  };
+  const warnings = [];
+  if (!highlightState.bridgeLive) warnings.push("bridge_offline");
+  if (!highlightState.bridgeReachable) warnings.push("doctor_offline");
+  if (!highlightState.capabilitiesVisible) warnings.push("capabilities_missing");
+  if (!highlightState.breakdownComplete) warnings.push("breakdown_incomplete");
+  if (!highlightState.followupApplyVisible) warnings.push("followup_apply_missing");
+  if (!highlightState.obsidianSettingsVisible) warnings.push("obsidian_settings_missing");
+
+  const summary = `Agent workflow overview: ${statusReport.summary || "status unavailable"}; ${capabilitiesReport.commandCount} runnable commands across ${capabilitiesReport.groupCount} groups.`;
+
+  const recommendedCommands = [
+    "mnaipro doctor --json",
+    "mnaipro status --json",
+    "mnaipro capabilities --json",
+    statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
+    "mnaipro followup apply latest --json",
+  ];
+
+  return {
+    ok: true,
+    kind: "overview",
+    title: "mnaipro overview",
+    summary,
+    warnings,
+    source: statusReport.source || statusInfo.source || "unknown",
+    status: statusReport,
+    doctor: doctorReport,
+    capabilities: capabilitiesReport,
+    surfaces: surfaceState.surfaces,
+    surfaceCounts: {
+      visible: surfaceState.visibleCount,
+      total: surfaceState.totalCount,
+      statusVisible: highlightState.bridgeLive ? 1 : 0,
+      doctorVisible: highlightState.bridgeReachable ? 1 : 0,
+      capabilitiesVisible: 1,
+      breakdownVisible: highlightState.breakdownComplete ? 1 : 0,
+      followupApplyVisible: highlightState.followupApplyVisible ? 1 : 0,
+      obsidianSettingsVisible: highlightState.obsidianSettingsVisible ? 1 : 0,
+      commandCount: capabilitiesReport.commandCount || 0,
+      groupCount: capabilitiesReport.groupCount || 0,
+      topLevelCount: capabilitiesReport.topLevelCount || 0,
+    },
+    highlights: highlightState,
+    recommendedCommands,
+    nextCommand: recommendedCommands[0],
+    details: {
+      status: statusReport,
+      doctor: doctorReport,
+      capabilities: capabilitiesReport,
+    },
+  };
+}
+
 function formatDoctorLines(report) {
   const lines = [
     `Doctor summary: ${report.summary || "(none)"}`,
@@ -1188,6 +1341,56 @@ function formatDoctorLines(report) {
   }
 
   return lines.join("\n");
+}
+
+function formatOverviewLines(report) {
+  const counts = report.surfaceCounts || {};
+  const highlights = report.highlights || {};
+  const lines = [
+    `Overview summary: ${report.summary || "(none)"}`,
+    `Visible surfaces: ${counts.visible || 0}/${counts.total || 0}`,
+    `Bridge live: ${highlights.bridgeLive ? "yes" : "no"}`,
+    `Bridge reachable: ${highlights.bridgeReachable ? "yes" : "no"}`,
+    `Breakdown complete: ${highlights.breakdownComplete ? "yes" : "no"}`,
+    `Follow-up apply visible: ${highlights.followupApplyVisible ? "yes" : "no"}`,
+    `Obsidian settings visible: ${highlights.obsidianSettingsVisible ? "yes" : "no"}`,
+    `Command count: ${counts.commandCount || 0}`,
+    `Group count: ${counts.groupCount || 0}`,
+  ];
+
+  if (Array.isArray(report.surfaces) && report.surfaces.length) {
+    lines.push("", "Surfaces:");
+    for (const surface of report.surfaces) {
+      lines.push(
+        `- ${surface.label} | ${surface.present ? "present" : "missing"} | ${surface.summary || "no summary"}`
+      );
+    }
+  }
+
+  if (Array.isArray(report.recommendedCommands) && report.recommendedCommands.length) {
+    lines.push("", "Recommended commands:");
+    for (const command of report.recommendedCommands) {
+      lines.push(`- ${command}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function formatOverviewCompact(report) {
+  const counts = report.surfaceCounts || {};
+  const highlights = report.highlights || {};
+  return [
+    `ok=${report.ok ? "yes" : "no"}`,
+    `kind=${report.kind || "unknown"}`,
+    `visible=${counts.visible || 0}/${counts.total || 0}`,
+    `bridge=${highlights.bridgeLive ? "live" : "offline"}`,
+    `reachable=${highlights.bridgeReachable ? "yes" : "no"}`,
+    `breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"}`,
+    `commands=${counts.commandCount || 0}`,
+    `groups=${counts.groupCount || 0}`,
+    `next=${report.nextCommand || "none"}`,
+  ].join(" ");
 }
 
 function inferBridgeStatusHint(report) {
@@ -1335,28 +1538,98 @@ function bridgeHelpFooter() {
   ].join("\n");
 }
 
-function topLevelHelpFooter() {
+function buildCommandSurfaceDocs() {
+  return {
+    sections: [
+      {
+        label: "Overview",
+        prefix: "mnaipro",
+        commands: ["overview"],
+        summary: "Top-level workflow evidence map.",
+      },
+      {
+        label: "Bridge ops",
+        prefix: "mnaipro bridge",
+        commands: ["status", "doctor", "render", "reload", "logs"],
+        summary: "Bridge lifecycle commands for deploy, status, and local health checks.",
+      },
+      {
+        label: "Artifacts",
+        prefix: "mnaipro",
+        commands: [
+          "status",
+          "doctor",
+          "plan latest",
+          "followup latest",
+          "followup apply latest",
+          "report latest",
+          "diag latest",
+        ],
+        summary: "Inspect the latest plan, follow-up, apply, and diagnostic artifacts.",
+      },
+      {
+        label: "Replay",
+        prefix: "mnaipro replay",
+        commands: ["latest", "after-apply"],
+        summary: "Replay cached bridge requests.",
+      },
+      {
+        label: "Breakdown",
+        prefix: "mnaipro breakdown",
+        commands: ["smoke", "postprocess", "artifacts"],
+        summary: "Breakdown-specific helpers.",
+      },
+      {
+        label: "Raw access",
+        prefix: "mnaipro request",
+        commands: ["get /status"],
+        summary: "Raw bridge request passthrough.",
+      },
+    ],
+    discovery: {
+      label: "Discovery",
+      command: "mnaipro capabilities --json",
+      summary: "Inspect the CLI command registry and capability groups.",
+    },
+    commonFlows: [
+      "mnaipro overview --json",
+      "mnaipro bridge doctor",
+      "mnaipro bridge reload",
+      "mnaipro bridge logs --follow --interval 2",
+      "mnaipro breakdown smoke --json",
+      "mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
+      "mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
+      "mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
+      "mnaipro breakdown postprocess",
+      "mnaipro breakdown artifacts --json",
+    ],
+  };
+}
+
+function formatCommandSurfaceLine(label, body) {
+  const spacing = Math.max(1, 13 - String(label || "").length);
+  return `  ${label}:${" ".repeat(spacing)}${body}`;
+}
+
+function formatCommandSurfaceSection(section) {
+  const commands = Array.isArray(section?.commands) ? section.commands.join(" | ") : "";
+  return formatCommandSurfaceLine(section.label, `${section.prefix} ${commands}`.trim());
+}
+
+function formatCommandSurfaceFooter(surfaceDocs = buildCommandSurfaceDocs()) {
   return [
     "",
     "Command groups:",
-    "  Bridge ops:   mnaipro bridge status | doctor | render | reload | logs",
-    "  Artifacts:    mnaipro status | doctor | plan latest | followup latest | followup apply latest | report latest | diag latest",
-    "  Replay:       mnaipro replay latest | replay after-apply",
-    "  Breakdown:    mnaipro breakdown smoke | postprocess | artifacts",
-    "  Raw access:   mnaipro request get /status",
-    "  Discovery:    mnaipro capabilities --json",
+    ...surfaceDocs.sections.map(formatCommandSurfaceSection),
+    formatCommandSurfaceLine(surfaceDocs.discovery.label, surfaceDocs.discovery.command),
     "",
     "Common flows:",
-    "  mnaipro bridge doctor",
-    "  mnaipro bridge reload",
-    "  mnaipro bridge logs --follow --interval 2",
-    "  mnaipro breakdown smoke --json",
-    "  mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
-    "  mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
-    "  mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
-    "  mnaipro breakdown postprocess",
-    "  mnaipro breakdown artifacts --json",
+    ...surfaceDocs.commonFlows.map((flow) => `  ${flow}`),
   ].join("\n");
+}
+
+function topLevelHelpFooter() {
+  return formatCommandSurfaceFooter();
 }
 
 function summarizeCommandOptions(command) {
@@ -1471,6 +1744,7 @@ function collectCapabilityRegistry(program) {
 
 function buildCapabilitiesReport(program) {
   const registry = collectCapabilityRegistry(program);
+  const surfaceDocs = buildCommandSurfaceDocs();
   return {
     ok: true,
     kind: "capabilities",
@@ -1484,7 +1758,9 @@ function buildCapabilitiesReport(program) {
     topLevel: registry.topLevel,
     groups: registry.groups,
     registry: registry.registry,
+    surfaceDocs,
     recommendedCommands: [
+      "mnaipro overview --json",
       "mnaipro capabilities --json",
       "mnaipro status --compact",
       "mnaipro doctor",
@@ -1549,6 +1825,22 @@ async function handleCapabilities(program, options) {
     return;
   }
   outputText(formatCapabilitiesLines(report));
+}
+
+async function handleOverview(program, options) {
+  const report = await buildOverviewReport(program, {
+    baseUrl: options.baseUrl || DEFAULT_BASE_URL,
+    obsidianVaultPath: options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH,
+  });
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatOverviewCompact(report));
+    return;
+  }
+  outputText(formatOverviewLines(report));
 }
 
 function collectReportInfo(kind) {
@@ -2005,6 +2297,7 @@ async function handleBreakdownPostprocess(options) {
   if (options.inputPath) args.push("--input", options.inputPath);
   if (options.json) args.push("--json");
   if (options.compact) args.push("--compact");
+  if (options.liveOnly) args.push("--live-only");
   if (options.help) args.push("--help");
   const result = spawnSync(process.execPath, [BREAKDOWN_POSTPROCESS_SCRIPT, ...args], {
     encoding: "utf8",
@@ -2252,6 +2545,25 @@ function createProgram() {
       });
     });
 
+  program
+    .command("overview")
+    .description("Render a top-level workflow overview across status, doctor, capabilities, and Breakdown evidence.")
+    .option("--base-url <url>", "bridge base URL")
+    .option(
+      "--obsidian-vault-path <path>",
+      "Obsidian vault root used for sync settings evidence"
+    )
+    .option("--json", "emit JSON output")
+    .option("--compact", "emit a compact single-line summary")
+    .action(async (cmd) => {
+      await handleOverview(program, {
+        baseUrl: cmd.baseUrl || program.opts().baseUrl,
+        obsidianVaultPath: cmd.obsidianVaultPath || program.opts().obsidianVaultPath,
+        json: !!cmd.json || !!program.opts().json,
+        compact: !!cmd.compact || !!program.opts().compact,
+      });
+    });
+
   const bridge = new Command("bridge").description(
     "Bridge lifecycle commands for deploy, status, and local health checks."
   );
@@ -2489,11 +2801,13 @@ function createProgram() {
     .option("--input <path>", "inspect a specific branch snapshot or apply report")
     .option("--json", "emit JSON output")
     .option("--compact", "emit a compact single-line summary")
+    .option("--live-only", "skip the apply-report proxy fallback and require dedicated Breakdown artifacts")
     .action(async (inputPath, cmd) => {
       await handleBreakdownPostprocess({
         inputPath: cmd.input || inputPath || "",
         json: !!cmd.json || !!program.opts().json,
         compact: !!cmd.compact || !!program.opts().compact,
+        liveOnly: !!cmd.liveOnly,
         help: !!cmd.help,
       });
     });

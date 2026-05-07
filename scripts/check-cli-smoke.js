@@ -135,6 +135,20 @@ function runCommand(label, scriptPath, args = [], extraEnv = {}) {
   };
 }
 
+function collapseWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function renderSurfaceSectionLine(section) {
+  const commands = Array.isArray(section && section.commands) ? section.commands.join(' | ') : '';
+  return `${section && section.label ? section.label : ''}: ${section && section.prefix ? section.prefix : ''} ${commands}`.trim();
+}
+
+function renderSurfaceDiscoveryLine(surfaceDocs) {
+  const discovery = surfaceDocs && surfaceDocs.discovery ? surfaceDocs.discovery : {};
+  return `${discovery.label || 'Discovery'}: ${discovery.command || ''}`.trim();
+}
+
 function deleteDefaultsDomain(domain) {
   if (!domain) return;
   spawnSync('defaults', ['delete', domain], {
@@ -840,7 +854,7 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities command count exposed',
-      mnaiproCapabilities.commandCount === 19,
+      mnaiproCapabilities.commandCount === 20,
       {
         commandCount: mnaiproCapabilities.commandCount || 0,
         topLevelCount: mnaiproCapabilities.topLevelCount || 0,
@@ -870,6 +884,15 @@ async function main() {
         ),
       { registry: mnaiproCapabilities.registry || null }
     );
+    ensure(
+      report,
+      'mnaipro capabilities overview leaf exposed',
+      Array.isArray(mnaiproCapabilities.registry) &&
+        mnaiproCapabilities.registry.some(
+          (entry) => entry && entry.path === 'overview' && entry.kind === 'command'
+        ),
+      { registry: mnaiproCapabilities.registry || null }
+    );
     const mnaiproCapabilitiesCompactResult = runCommand(
       'mnaipro capabilities --compact',
       mnaiproCli,
@@ -878,10 +901,107 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities compact exposes summary',
-      /commands=19/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+      /commands=20/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
         /groups=8/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
-        /topLevel=11/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
+        /topLevel=12/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
       { stdout: mnaiproCapabilitiesCompactResult.stdout || '' }
+    );
+
+    const mnaiproHelpResult = runCommand('mnaipro --help', mnaiproCli, ['--help']);
+    ensure(
+      report,
+      'mnaipro capabilities surface docs exposed',
+      mnaiproCapabilities.surfaceDocs &&
+        Array.isArray(mnaiproCapabilities.surfaceDocs.sections) &&
+        mnaiproCapabilities.surfaceDocs.sections.length > 0 &&
+        Array.isArray(mnaiproCapabilities.surfaceDocs.commonFlows) &&
+        mnaiproCapabilities.surfaceDocs.commonFlows.length > 0 &&
+        mnaiproCapabilities.surfaceDocs.discovery &&
+        typeof mnaiproCapabilities.surfaceDocs.discovery.command === 'string',
+      { surfaceDocs: mnaiproCapabilities.surfaceDocs || null }
+    );
+    ensure(
+      report,
+      'mnaipro help shares surface docs with capabilities',
+      collapseWhitespace(mnaiproHelpResult.stdout || '').includes('Command groups:') &&
+        collapseWhitespace(mnaiproHelpResult.stdout || '').includes('Common flows:') &&
+        mnaiproCapabilities.surfaceDocs.sections.every((section) =>
+          collapseWhitespace(mnaiproHelpResult.stdout || '').includes(
+            collapseWhitespace(renderSurfaceSectionLine(section))
+          )
+        ) &&
+        collapseWhitespace(mnaiproHelpResult.stdout || '').includes(
+          collapseWhitespace(renderSurfaceDiscoveryLine(mnaiproCapabilities.surfaceDocs))
+        ) &&
+        mnaiproCapabilities.surfaceDocs.commonFlows.every((flow) =>
+          collapseWhitespace(mnaiproHelpResult.stdout || '').includes(collapseWhitespace(flow))
+        ),
+      {
+        stdout: mnaiproHelpResult.stdout || '',
+        surfaceDocs: mnaiproCapabilities.surfaceDocs || null,
+      }
+    );
+
+    const mnaiproOverviewResult = runCommand(
+      'mnaipro overview',
+      mnaiproCli,
+      ['overview', '--json'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    const mnaiproOverview = parseJson('mnaipro overview', mnaiproOverviewResult.stdout);
+    report.commands.push(summarizeCommand(mnaiproOverviewResult, mnaiproOverview));
+    ensure(report, 'mnaipro overview ok', mnaiproOverview.ok === true, { kind: mnaiproOverview.kind });
+    ensure(report, 'mnaipro overview kind exposed', mnaiproOverview.kind === 'overview', {
+      kind: mnaiproOverview.kind,
+    });
+    ensure(
+      report,
+      'mnaipro overview surface counts exposed',
+      mnaiproOverview.surfaceCounts &&
+        typeof mnaiproOverview.surfaceCounts.visible === 'number' &&
+        typeof mnaiproOverview.surfaceCounts.total === 'number' &&
+        mnaiproOverview.surfaceCounts.visible === mnaiproOverview.surfaceCounts.total &&
+        mnaiproOverview.surfaceCounts.total >= 5,
+      { surfaceCounts: mnaiproOverview.surfaceCounts || null }
+    );
+    ensure(
+      report,
+      'mnaipro overview nested reports exposed',
+      mnaiproOverview.status &&
+        mnaiproOverview.doctor &&
+        mnaiproOverview.capabilities &&
+        mnaiproOverview.status.kind === 'status' &&
+        mnaiproOverview.doctor.kind === 'doctor' &&
+        mnaiproOverview.capabilities.kind === 'capabilities',
+      {
+        status: mnaiproOverview.status || null,
+        doctor: mnaiproOverview.doctor || null,
+        capabilities: mnaiproOverview.capabilities || null,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro overview recommended commands exposed',
+      Array.isArray(mnaiproOverview.recommendedCommands) &&
+        mnaiproOverview.recommendedCommands.length > 0 &&
+        mnaiproOverview.recommendedCommands[0] === 'mnaipro doctor --json' &&
+        mnaiproOverview.recommendedCommands.includes('mnaipro capabilities --json'),
+      { recommendedCommands: mnaiproOverview.recommendedCommands || null }
+    );
+    const mnaiproOverviewCompactResult = runCommand(
+      'mnaipro overview --compact',
+      mnaiproCli,
+      ['overview', '--compact']
+    );
+    ensure(
+      report,
+      'mnaipro overview compact exposes summary',
+      /kind=overview/.test(mnaiproOverviewCompactResult.stdout || '') &&
+        /next=mnaipro doctor --json/.test(mnaiproOverviewCompactResult.stdout || ''),
+      { stdout: mnaiproOverviewCompactResult.stdout || '' }
     );
 
     const mnaiproFollowupResult = runCommand(
@@ -1385,6 +1505,19 @@ async function main() {
       { chatMemories: appInventory.paths ? appInventory.paths.chatMemories : null }
     );
 
+    const margHelpResult = runCommand('marginnote-cli --help', marginnoteCli, ['--help']);
+    report.commands.push(summarizeCommand(margHelpResult, {
+      ok: true,
+      kind: 'help',
+      title: 'marginnote-cli help',
+    }));
+    ensure(
+      report,
+      'marginnote-cli help overview command exposed',
+      /marginnote-cli overview/.test(margHelpResult.stdout || ''),
+      { stdout: margHelpResult.stdout || '' }
+    );
+
     const margCapabilitiesResult = runCommand(
       'marginnote-cli capabilities',
       marginnoteCli,
@@ -1401,13 +1534,94 @@ async function main() {
     );
     ensure(
       report,
+      'marginnote-cli capabilities overview leaf exposed',
+      Array.isArray(margCapabilities.registry) &&
+        margCapabilities.registry.some((entry) => entry && entry.command === 'marginnote-cli overview'),
+      { registry: margCapabilities.registry || null }
+    );
+    ensure(
+      report,
+      'marginnote-cli capabilities surface docs exposed',
+      margCapabilities.surfaceDocs &&
+        Array.isArray(margCapabilities.surfaceDocs.sections) &&
+        margCapabilities.surfaceDocs.sections.length >= 4 &&
+        margCapabilities.surfaceDocs.discovery &&
+        typeof margCapabilities.surfaceDocs.discovery.command === 'string' &&
+        Array.isArray(margCapabilities.surfaceDocs.commonFlows) &&
+        margCapabilities.surfaceDocs.commonFlows.length >= 4,
+      { surfaceDocs: margCapabilities.surfaceDocs || null }
+    );
+    ensure(
+      report,
       'marginnote-cli capabilities groups exposed',
       Array.isArray(margCapabilities.groups) && margCapabilities.groups.length > 0,
       { groupCount: margCapabilities.groupCount || 0 }
     );
-    ensure(report, 'marginnote-cli capabilities command count', margCapabilities.commandCount === 23, {
+    ensure(report, 'marginnote-cli capabilities command count', margCapabilities.commandCount === 24, {
       commandCount: margCapabilities.commandCount || 0,
     });
+
+    const margOverviewResult = runCommand(
+      'marginnote-cli overview',
+      marginnoteCli,
+      ['overview', '--json']
+    );
+    const margOverview = parseJson('marginnote-cli overview', margOverviewResult.stdout);
+    report.commands.push(summarizeCommand(margOverviewResult, margOverview));
+    ensure(report, 'marginnote-cli overview ok', margOverview.ok === true, { kind: margOverview.kind });
+    ensure(report, 'marginnote-cli overview kind exposed', margOverview.kind === 'overview', {
+      kind: margOverview.kind,
+    });
+    ensure(
+      report,
+      'marginnote-cli overview surface counts exposed',
+      margOverview.surfaceCounts &&
+        typeof margOverview.surfaceCounts.visible === 'number' &&
+        typeof margOverview.surfaceCounts.total === 'number' &&
+        margOverview.surfaceCounts.visible === margOverview.surfaceCounts.total &&
+        margOverview.surfaceCounts.total >= 4,
+      { surfaceCounts: margOverview.surfaceCounts || null }
+    );
+    ensure(
+      report,
+      'marginnote-cli overview nested reports exposed',
+      margOverview.status &&
+        margOverview.doctor &&
+        margOverview.aiOverview &&
+        margOverview.capabilities &&
+        margOverview.status.kind === 'app_inspect' &&
+        margOverview.doctor.kind === 'doctor' &&
+        margOverview.aiOverview.kind === 'ai_overview' &&
+        margOverview.capabilities.kind === 'capabilities',
+      {
+        status: margOverview.status || null,
+        doctor: margOverview.doctor || null,
+        aiOverview: margOverview.aiOverview || null,
+        capabilities: margOverview.capabilities || null,
+      }
+    );
+    ensure(
+      report,
+      'marginnote-cli overview recommended commands exposed',
+      Array.isArray(margOverview.recommendedCommands) &&
+        margOverview.recommendedCommands.length > 0 &&
+        margOverview.recommendedCommands[0] === 'marginnote-cli doctor --json' &&
+        margOverview.recommendedCommands.includes('marginnote-cli ai overview --json'),
+      { recommendedCommands: margOverview.recommendedCommands || null }
+    );
+    const margOverviewCompactResult = runCommand(
+      'marginnote-cli overview --compact',
+      marginnoteCli,
+      ['overview', '--compact']
+    );
+    ensure(
+      report,
+      'marginnote-cli overview compact exposes summary',
+      /ok=yes/.test(margOverviewCompactResult.stdout || '') &&
+        /kind=overview/.test(margOverviewCompactResult.stdout || '') &&
+        /next=marginnote-cli doctor --json/.test(margOverviewCompactResult.stdout || ''),
+      { stdout: margOverviewCompactResult.stdout || '' }
+    );
 
     const aiStatusResult = runCommand(
       'marginnote-cli ai status',
@@ -2494,6 +2708,18 @@ async function main() {
     ensure(report, 'mn-obsidian-bridge capabilities command count', bridgeCapabilities.commandCount === 18, {
       commandCount: bridgeCapabilities.commandCount || 0,
     });
+    ensure(
+      report,
+      'mn-obsidian-bridge capabilities surface docs exposed',
+      bridgeCapabilities.surfaceDocs &&
+        Array.isArray(bridgeCapabilities.surfaceDocs.sections) &&
+        bridgeCapabilities.surfaceDocs.sections.length >= 4 &&
+        bridgeCapabilities.surfaceDocs.discovery &&
+        typeof bridgeCapabilities.surfaceDocs.discovery.command === 'string' &&
+        Array.isArray(bridgeCapabilities.surfaceDocs.commonFlows) &&
+        bridgeCapabilities.surfaceDocs.commonFlows.length >= 4,
+      { surfaceDocs: bridgeCapabilities.surfaceDocs || null }
+    );
 
     const obSettingsResult = runCommand(
       'mn-obsidian-bridge ob settings',
