@@ -16,12 +16,15 @@ It is split into two parts:
   A local mock MarginNote runtime so we can test the loop without launching the app.
 - `bridge/server.js`
   A local planning service. In production this should call a real LLM. In this starter it returns deterministic action plans so the whole loop is easy to test.
+- `bridge/model-backend.js`
+  A provider-agnostic model execution backend that persists request, response, and trace artifacts, exposes `/model/run`, `/model/replay`, and `/model/latest`, and keeps preview/dry-run the default.
 - `bridge/planner.js`
   Shared planning core used by both the live bridge server and offline replay scripts, so regression checks exercise the same planner logic as production.
 - standalone CLI split
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
+  - `mnaipro request get|post` exposes raw bridge passthrough, including the model backend endpoints when you need direct inspection or replay.
   - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
   - `marginnote-cli overview` gives a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
   - `marginnote-cli capabilities` and `marginnote-cli --help` now share the same `surfaceDocs` catalog.
@@ -451,6 +454,12 @@ When the local bridge is running, these endpoints are available:
   returns the newest stored follow-up artifact, or derives the same follow-up plan from the latest apply artifact when no follow-up file exists yet
 - `GET /reports/latest?kind=followup_apply`
 - `GET /reports/latest?kind=diagnostic`
+- `POST /model/run`
+  runs the provider-agnostic model backend; preview-only requests keep `dryRun: true` unless you intentionally opt into a real provider call
+- `POST /model/replay`
+  replays a stored model trace or request through the same backend interface
+- `GET /model/latest`
+  returns the newest stored model execution trace and summary
 
 This is intended to let us debug future runs from logs and APIs first, instead of relying on repeated manual “what did you see?” testing loops.
 The same principle now applies to native MarginNote AI research too: the repo includes a repeatable local inspection command instead of relying only on one-off manual bundle spelunking.

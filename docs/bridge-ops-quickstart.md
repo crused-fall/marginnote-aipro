@@ -44,6 +44,18 @@ mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough
 mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json
 ```
 
+## Model backend
+
+The bridge also exposes a provider-agnostic model execution surface. Preview-only requests keep `dryRun: true` unless the bridge is intentionally configured for a real provider call.
+
+```bash
+mnaipro request post /model/run --body '{"dryRun":true,"prompt":"preview this branch"}'
+mnaipro request get /model/latest
+mnaipro request post /model/replay --body '{"traceId":"<trace-id>","dryRun":true}'
+```
+
+The backend reads `MN_MODEL_*` or `MN_BRIDGE_MODEL_*` environment variables for provider type, endpoint, model name, timeout, API key, and optional header JSON.
+
 ## Where to look when something is off
 
 - launch agent plist: `~/Library/LaunchAgents/com.mnaipro.bridge-supervisor.plist`

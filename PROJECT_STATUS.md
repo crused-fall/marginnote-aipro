@@ -3,8 +3,8 @@
 Last updated: 2026-05-07
 
 ## Current phase
-- GitHub governance baseline complete.
-- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices.
+- Bridge model-backend slice complete and locally verified.
+- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is the remaining `mnaipro` hardening pass.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.
@@ -26,25 +26,21 @@ Last updated: 2026-05-07
 - The standalone `marginnote-cli overview` command now exposes a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
 - The standalone `marginnote-cli capabilities` command now also exposes a shared `surfaceDocs` catalog, and its help footer reads from the same command-surface source of truth.
 - The standalone `mn-obsidian-bridge capabilities` command now exposes a shared `surfaceDocs` catalog, and the bridge help footer reads from the same command-surface source of truth.
+- The bridge now has a provider-agnostic model backend with `/model/run`, `/model/replay`, and `/model/latest` endpoints, dry-run default behavior, persisted request/response/trace artifacts, and raw CLI passthrough for inspection and replay.
+- `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` now surface model-backend readiness and latest execution evidence alongside the existing Breakdown and bridge health signals.
 - `npm run native-ai:templates` now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization, keeping the template governance report preview-only and read-only.
 - No open GitHub issues remain.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Decide whether native AI template governance should stay preview-only or gain a separate, explicitly scoped apply path for whitespace-only normalization proposals.
+- Start the next roadmap phase: finish the remaining `mnaipro` product-line hardening, especially any selected-branch polish that still needs to be promoted from preview-only to a stable operator surface.
 
 ## Last validated locally
-- `git diff --check`
-- `npm run addon:build`
-- `node --check scripts/check-ci.js`
-- `ruby -e 'require "yaml"; files = Dir[".github/**/*.yml", ".github/**/*.yaml"]; files.each { |f| YAML.load_file(f) }'`
-- `npm run check:ci`
+- `node --check bridge/model-backend.js`
+- `node --check bridge/server.js`
 - `node --check cli/mnaipro.js`
-- `node cli/mnaipro.js --help`
-- `node cli/mnaipro.js overview --json`
-- `node cli/mnaipro.js breakdown postprocess --live-only --compact`
-- `node --check scripts/check-cli-smoke.js`
-- `node scripts/check-cli-smoke.js`
-- `npm run native-ai:breakdown-postprocess -- --json`
-- `npm run native-ai:breakdown-check`
+- `node --check scripts/check-bridge-model-backend.js`
+- `node scripts/check-bridge-model-backend.js`
+- `npm run check:ci`
 - `npm run check`
+- `npm run addon:build`

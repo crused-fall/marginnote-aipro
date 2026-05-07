@@ -854,7 +854,7 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities command count exposed',
-      mnaiproCapabilities.commandCount === 20,
+      mnaiproCapabilities.commandCount === 21,
       {
         commandCount: mnaiproCapabilities.commandCount || 0,
         topLevelCount: mnaiproCapabilities.topLevelCount || 0,
@@ -901,7 +901,7 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities compact exposes summary',
-      /commands=20/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+      /commands=21/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
         /groups=8/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
         /topLevel=12/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
       { stdout: mnaiproCapabilitiesCompactResult.stdout || '' }

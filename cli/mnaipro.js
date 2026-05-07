@@ -284,6 +284,28 @@ function summarizePlanPlan(plan) {
   };
 }
 
+function summarizeModelExecutionPlan(run) {
+  const trace = run?.trace || {};
+  const response = run?.response || {};
+  return {
+    ok: !!run?.ok,
+    kind: run?.kind || "model_execution",
+    status: run?.status || trace.status || null,
+    dryRun: !!(run?.dryRun ?? trace.dryRun),
+    requestId: run?.requestId || trace.requestId || null,
+    traceId: run?.traceId || trace.traceId || null,
+    replayKey: run?.replayKey || trace.replayKey || null,
+    providerType: run?.provider?.type || trace.provider?.type || null,
+    providerAvailable: !!(run?.provider && run.provider.available),
+    failureClass: run?.failure?.classification || trace.failure?.classification || null,
+    fallbackUsed: !!(run?.fallback && run.fallback.used),
+    requestMessageCount:
+      run?.request?.inputSummary?.messageCount ?? trace.request?.messageCount ?? 0,
+    responseToolCallCount:
+      response.summary?.toolCallCount ?? trace.response?.toolCallCount ?? 0,
+  };
+}
+
 function formatPlanLines(reportInfo) {
   const plan = reportInfo.report || {};
   const summary = summarizePlanPlan(plan);
@@ -966,8 +988,9 @@ async function handleStatus(options) {
       ? payload.latestFollowupApply.requestId || "unknown"
       : "none";
     const supervisorState = payload.supervisorState || null;
+    const modelBackendState = payload.modelBackend || null;
     outputText(
-      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
+      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
     );
     return;
   }
@@ -989,18 +1012,22 @@ function buildStatusReport(statusInfo, obsidianVaultPath) {
       statusInfo.payload.latest &&
       statusInfo.payload.latest.followupApply) ||
     null;
+  const modelBackend = (statusInfo.payload && statusInfo.payload.modelBackend) || null;
   const bridgeLive = statusInfo.source === "live_http";
   const payload = {
     ...(statusInfo.payload && typeof statusInfo.payload === "object" ? statusInfo.payload : {}),
     kind: "status",
     title: "mnaipro status",
-    summary: `Bridge ${bridgeLive ? "live" : "offline"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
+    summary: `Bridge ${bridgeLive ? "live" : "offline"}; model backend ${modelBackend && modelBackend.configured ? `${modelBackend.available ? "ready" : "configured"}${modelBackend.reason && !modelBackend.available ? ` (${modelBackend.reason})` : ""}` : "disabled"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
     breakdownArtifacts,
     breakdownNextCommand: breakdownArtifacts.nextCommand || "mnaipro breakdown artifacts --json",
     latestFollowupApply,
     obsidianSyncSettings,
     obsidianVaultPath: obsidianSyncSettings.vaultPath,
   };
+  if (modelBackend) {
+    payload.modelBackend = modelBackend;
+  }
   return payload;
 }
 
@@ -1011,6 +1038,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
   const obsidianSyncSettings = summarizeObsidianSyncSettings(obsidianVaultPath);
   const breakdownArtifacts = bridgePayload.breakdownArtifacts || buildBreakdownArtifactAudit();
   const latestFollowupApply = bridgePayload.latestFollowupApply || bridgePayload.latest?.followupApply || null;
+  const modelBackend = bridgePayload.modelBackend || null;
   const supervisorState = bridgePayload.supervisorState || null;
   const label = `gui/${process.getuid()}/com.mnaipro.bridge-supervisor`;
   const launchctlInfo = launchctlPrint(label);
@@ -1070,7 +1098,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     ok: true,
     kind: "doctor",
     title: "mnaipro doctor",
-    summary: `Bridge ${bridgeReachable ? "reachable" : "offline"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
+    summary: `Bridge ${bridgeReachable ? "reachable" : "offline"}; model backend ${modelBackend && modelBackend.configured ? `${modelBackend.available ? "ready" : "configured"}` : "disabled"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
     source: statusInfo.source,
     bridgeOffline: !bridgeReachable,
     bridgeOfflineReason: bridgeReachable ? null : bridgePayload.bridgeOfflineReason || null,
@@ -1079,6 +1107,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     breakdownNextCommand: breakdownArtifacts.nextCommand || "mnaipro breakdown artifacts --json",
     obsidianSyncSettings,
     supervisorState,
+    modelBackend,
     latestFollowupApply,
     statusHint: inferBridgeStatusHint({
       checks,
@@ -1117,6 +1146,7 @@ function buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport) {
   const breakdownStatus = statusReport.breakdownArtifacts ? statusReport.breakdownArtifacts.status || "unknown" : "unknown";
   const followupApply = statusReport.latestFollowupApply || null;
   const obsidianSettings = statusReport.obsidianSyncSettings || null;
+  const modelBackend = statusReport.modelBackend || null;
   const surfaces = [
     {
       key: "status",
@@ -1169,6 +1199,25 @@ function buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport) {
       nextCommand: statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
     },
     {
+      key: "model_backend",
+      label: "Model backend",
+      present: true,
+      summary: modelBackend
+        ? modelBackend.configured
+          ? modelBackend.available
+            ? `Model backend ${modelBackend.provider?.type || "unknown"} is ready.`
+            : `Model backend ${modelBackend.provider?.type || "unknown"} is configured but unavailable.`
+          : "Model backend is disabled."
+        : "Model backend is unavailable.",
+      evidence: [
+        `provider:${modelBackend && modelBackend.provider ? modelBackend.provider.type || "unknown" : "disabled"}`,
+        `configured:${modelBackend && modelBackend.configured ? "yes" : "no"}`,
+        `available:${modelBackend && modelBackend.available ? "yes" : "no"}`,
+        `latest:${modelBackend && modelBackend.latest ? modelBackend.latest.status || "unknown" : "none"}`,
+      ],
+      nextCommand: modelBackend && modelBackend.nextCommand ? modelBackend.nextCommand : "mnaipro request post /model/run --json",
+    },
+    {
       key: "obsidian_settings",
       label: "Obsidian settings",
       present: true,
@@ -1205,6 +1254,7 @@ async function buildOverviewReport(program, options = {}) {
     bridgeReachable: !doctorReport.bridgeOffline,
     capabilitiesVisible: !!capabilitiesReport,
     breakdownComplete: statusReport.breakdownArtifacts && statusReport.breakdownArtifacts.status === "complete",
+    modelBackendVisible: !!statusReport.modelBackend,
     followupApplyVisible: !!statusReport.latestFollowupApply,
     obsidianSettingsVisible: !!(statusReport.obsidianSyncSettings && statusReport.obsidianSyncSettings.exists),
   };
@@ -1213,6 +1263,7 @@ async function buildOverviewReport(program, options = {}) {
   if (!highlightState.bridgeReachable) warnings.push("doctor_offline");
   if (!highlightState.capabilitiesVisible) warnings.push("capabilities_missing");
   if (!highlightState.breakdownComplete) warnings.push("breakdown_incomplete");
+  if (!highlightState.modelBackendVisible) warnings.push("model_backend_missing");
   if (!highlightState.followupApplyVisible) warnings.push("followup_apply_missing");
   if (!highlightState.obsidianSettingsVisible) warnings.push("obsidian_settings_missing");
 
@@ -1244,6 +1295,7 @@ async function buildOverviewReport(program, options = {}) {
       doctorVisible: highlightState.bridgeReachable ? 1 : 0,
       capabilitiesVisible: 1,
       breakdownVisible: highlightState.breakdownComplete ? 1 : 0,
+      modelBackendVisible: highlightState.modelBackendVisible ? 1 : 0,
       followupApplyVisible: highlightState.followupApplyVisible ? 1 : 0,
       obsidianSettingsVisible: highlightState.obsidianSettingsVisible ? 1 : 0,
       commandCount: capabilitiesReport.commandCount || 0,
@@ -1315,6 +1367,25 @@ function formatDoctorLines(report) {
     }
   }
 
+  if (report.modelBackend) {
+    const modelBackend = report.modelBackend;
+    const latestModel = modelBackend.latest || null;
+    lines.push(
+      `Model backend: provider=${modelBackend.provider?.type || "disabled"} | configured=${modelBackend.configured ? "yes" : "no"} | available=${modelBackend.available ? "yes" : "no"} | dryRunDefault=${modelBackend.dryRunDefault ? "yes" : "no"}`
+    );
+    if (modelBackend.reason) {
+      lines.push(`Model backend reason: ${modelBackend.reason}`);
+    }
+    if (latestModel) {
+      lines.push(
+        `Latest model trace: ${latestModel.requestId || "unknown"} | status=${latestModel.status || "unknown"} | dryRun=${latestModel.dryRun ? "yes" : "no"} | provider=${latestModel.providerType || "unknown"} | replayKey=${latestModel.replayKey || "unknown"}`
+      );
+    }
+    if (modelBackend.nextCommand) {
+      lines.push(`Model backend next: ${modelBackend.nextCommand}`);
+    }
+  }
+
   if (report.supervisorState) {
     lines.push(
       `Bridge supervisor: ownership=${report.supervisorState.ownership || "unknown"} | pid=${report.supervisorState.bridgePid || "none"} | updatedAt=${report.supervisorState.updatedAt || "(unknown)"}`
@@ -1352,6 +1423,7 @@ function formatOverviewLines(report) {
     `Bridge live: ${highlights.bridgeLive ? "yes" : "no"}`,
     `Bridge reachable: ${highlights.bridgeReachable ? "yes" : "no"}`,
     `Breakdown complete: ${highlights.breakdownComplete ? "yes" : "no"}`,
+    `Model backend visible: ${highlights.modelBackendVisible ? "yes" : "no"}`,
     `Follow-up apply visible: ${highlights.followupApplyVisible ? "yes" : "no"}`,
     `Obsidian settings visible: ${highlights.obsidianSettingsVisible ? "yes" : "no"}`,
     `Command count: ${counts.commandCount || 0}`,
@@ -1387,6 +1459,7 @@ function formatOverviewCompact(report) {
     `bridge=${highlights.bridgeLive ? "live" : "offline"}`,
     `reachable=${highlights.bridgeReachable ? "yes" : "no"}`,
     `breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"}`,
+    `model_backend=${highlights.modelBackendVisible ? "visible" : "missing"}`,
     `commands=${counts.commandCount || 0}`,
     `groups=${counts.groupCount || 0}`,
     `next=${report.nextCommand || "none"}`,
@@ -1535,6 +1608,10 @@ function bridgeHelpFooter() {
     "Bridge log modes:",
     "  One-shot:     mnaipro bridge logs --scope both --lines 40",
     "  Follow:       mnaipro bridge logs --follow --interval 2",
+    "",
+    "Raw bridge access:",
+    "  GET:          mnaipro request get /status",
+    "  POST:         mnaipro request post /model/run --body '{\"dryRun\":true}'",
   ].join("\n");
 }
 
@@ -1582,8 +1659,8 @@ function buildCommandSurfaceDocs() {
       {
         label: "Raw access",
         prefix: "mnaipro request",
-        commands: ["get /status"],
-        summary: "Raw bridge request passthrough.",
+        commands: ["get /status", "post /model/run"],
+        summary: "Raw bridge request passthrough for read and execute surfaces.",
       },
     ],
     discovery: {
@@ -1602,6 +1679,8 @@ function buildCommandSurfaceDocs() {
       "mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
       "mnaipro breakdown postprocess",
       "mnaipro breakdown artifacts --json",
+      "mnaipro request get /model/latest",
+      "mnaipro request post /model/run --body '{\"dryRun\":true}'",
     ],
   };
 }
@@ -1982,6 +2061,24 @@ function formatRequestGetResponse(responseInfo, options) {
   return lines.join("\n");
 }
 
+function formatRequestPostResponse(responseInfo, options) {
+  if (options.json) {
+    return responseInfo;
+  }
+  const lines = [
+    `Request: POST ${responseInfo.path}`,
+    `URL: ${responseInfo.url}`,
+    `Status: ${responseInfo.status}`,
+    `Content-Type: ${responseInfo.contentType || "unknown"}`,
+  ];
+  if (responseInfo.body && typeof responseInfo.body === "object") {
+    lines.push(JSON.stringify(responseInfo.body, null, 2));
+  } else if (typeof responseInfo.bodyText === "string") {
+    lines.push(responseInfo.bodyText);
+  }
+  return lines.join("\n");
+}
+
 async function handleReportCommand(kind, options) {
   const info = collectReportInfo(kind);
   if (!info) {
@@ -2269,6 +2366,64 @@ async function handleRequestGet(pathname, options) {
   }
 }
 
+async function handleRequestPost(pathname, options) {
+  const baseUrl = (options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const cleanPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${baseUrl}${cleanPath}`;
+  const rawBody =
+    typeof options.body === "string"
+      ? options.body
+      : options.bodyFile || options.body_file || options["body-file"]
+        ? safeRead(options.bodyFile || options.body_file || options["body-file"])
+        : "";
+  let parsedBody = null;
+  if (rawBody.trim()) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch (error) {
+      parsedBody = null;
+    }
+  }
+  const requestBody = parsedBody && typeof parsedBody === "object" ? parsedBody : rawBody || {};
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Accept: "application/json, text/plain;q=0.9, */*;q=0.1",
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify(requestBody),
+  });
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  let body = null;
+  if (contentType.includes("application/json")) {
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch (error) {
+      body = null;
+    }
+  }
+  const responseInfo = {
+    ok: response.ok,
+    method: "POST",
+    path: cleanPath,
+    url,
+    status: response.status,
+    contentType,
+    body: body || null,
+    bodyText: body ? null : text,
+    requestBody,
+  };
+  if (options.json) {
+    outputJson(responseInfo);
+  } else {
+    outputText(formatRequestPostResponse(responseInfo, options));
+  }
+  if (!response.ok) {
+    process.exitCode = 1;
+  }
+}
+
 async function handleBreakdownSmoke(argv, options) {
   const args = [];
   if (options.json) args.push("--json");
@@ -2525,8 +2680,9 @@ function createProgram() {
           ? report.latestFollowupApply.requestId || "unknown"
           : "none";
         const supervisorState = report.supervisorState || null;
+        const modelBackendState = report.modelBackend || null;
         outputText(
-          `bridge=${report.checks.bridgeReachable ? "live" : "offline"} hint=${report.statusHint || "unknown"} diagnostic=${report.checks.diagnosticAvailable ? "yes" : "no"} launch_agent=${report.launchAgent.plistExists ? "yes" : "no"} followup_apply=${report.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${report.breakdownArtifacts ? report.breakdownArtifacts.status || "unknown" : "unknown"} next=${report.breakdownNextCommand || "unknown"} obsidian_settings=${report.obsidianSyncSettings && report.obsidianSyncSettings.exists ? "present" : "missing"} missing=${report.missing.length}`
+          `bridge=${report.checks.bridgeReachable ? "live" : "offline"} hint=${report.statusHint || "unknown"} diagnostic=${report.checks.diagnosticAvailable ? "yes" : "no"} launch_agent=${report.launchAgent.plistExists ? "yes" : "no"} followup_apply=${report.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${report.breakdownArtifacts ? report.breakdownArtifacts.status || "unknown" : "unknown"} next=${report.breakdownNextCommand || "unknown"} obsidian_settings=${report.obsidianSyncSettings && report.obsidianSyncSettings.exists ? "present" : "missing"} missing=${report.missing.length}`
         );
         return;
       }
@@ -2833,9 +2989,27 @@ function createProgram() {
     .option("--base-url <url>", "bridge base URL")
     .option("--json", "emit JSON output")
     .action(async (pathname, cmd) => {
+      const options = typeof cmd.opts === "function" ? cmd.opts() : cmd || {};
       await handleRequestGet(pathname, {
-        baseUrl: cmd.baseUrl || program.opts().baseUrl,
-        json: !!cmd.json || !!program.opts().json,
+        baseUrl: options.baseUrl || program.opts().baseUrl,
+        json: !!options.json || !!program.opts().json,
+      });
+    });
+  request
+    .command("post")
+    .description("POST a raw bridge path with a JSON body.")
+    .argument("<path>", "bridge path, such as /model/run or /model/replay")
+    .option("--base-url <url>", "bridge base URL")
+    .option("--body <json>", "JSON body to send")
+    .option("--body-file <path>", "read the JSON body from a file")
+    .option("--json", "emit JSON output")
+    .action(async (pathname, cmd) => {
+      const options = typeof cmd.opts === "function" ? cmd.opts() : cmd || {};
+      await handleRequestPost(pathname, {
+        baseUrl: options.baseUrl || program.opts().baseUrl,
+        body: options.body || "",
+        bodyFile: options.bodyFile || options.body_file || options["body-file"] || "",
+        json: !!options.json || !!program.opts().json,
       });
     });
   program.addCommand(request);
@@ -2873,6 +3047,7 @@ module.exports = {
   handleReplayLatest,
   handleReplayAfterApply,
   handleRequestGet,
+  handleRequestPost,
   handleBreakdownSmoke,
   handleBreakdownArtifacts,
   summarizePlanPlan,

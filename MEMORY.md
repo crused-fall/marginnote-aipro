@@ -3,7 +3,7 @@
 Canonical long-term memory now lives in `PROJECT_MEMORY.md`.
 Current phase tracking lives in `PROJECT_STATUS.md`.
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Project Goal
 
@@ -57,6 +57,8 @@ Implemented:
 - local report inspection script at `scripts/inspect-latest-apply.js`
 - offline request replay script at `scripts/replay-requests.js`
 - local command-line wrapper at `cli/mnaipro.js` with a `mnaipro` bin entry for bridge status, doctor checks, latest-report inspection, replay, Breakdown smoke, and raw request passthrough
+- provider-agnostic model backend at `bridge/model-backend.js` with `/model/run`, `/model/replay`, and `/model/latest`, dry-run default behavior, replay hooks, and persisted request/response/trace artifacts
+- `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` now surface model-backend readiness and latest execution evidence alongside the existing Breakdown and bridge health signals
 - standalone `marginnote-cli` CLI at `/Users/cfall/Documents/Programs/marginnote-cli` for MarginNote native capability inspection, local evidence reading, and supported native AI preference writes
 - standalone `mn-obsidian-bridge` CLI at `/Users/cfall/Documents/Programs/MN-Obsidian-bridge` for MarginNote ↔ Obsidian bridge diagnostics, archive evidence reading, and supported Obsidian sync-setting writes
 - local `marginnote` Codex skill at `/Users/cfall/.codex/skills/marginnote` for routing MarginNote tasks to the right CLI surface instead of inventing a new runtime
