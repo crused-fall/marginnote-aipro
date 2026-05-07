@@ -18,6 +18,7 @@ Last updated: 2026-05-07
 - The governance skeleton branch was merged through PR #1.
 - The release-addon workflow now packages `.mnaddon` builds as artifacts and GitHub Release assets on tag pushes.
 - Issue #3 is closed after implementing the release packaging workflow and documenting the release path.
+- The `mnaipro capabilities` command now exposes the live command registry and capability groups.
 - No open GitHub issues remain.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 

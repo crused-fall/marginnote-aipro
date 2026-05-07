@@ -1344,6 +1344,7 @@ function topLevelHelpFooter() {
     "  Replay:       mnaipro replay latest | replay after-apply",
     "  Breakdown:    mnaipro breakdown smoke | postprocess | artifacts",
     "  Raw access:   mnaipro request get /status",
+    "  Discovery:    mnaipro capabilities --json",
     "",
     "Common flows:",
     "  mnaipro bridge doctor",
@@ -1356,6 +1357,198 @@ function topLevelHelpFooter() {
     "  mnaipro breakdown postprocess",
     "  mnaipro breakdown artifacts --json",
   ].join("\n");
+}
+
+function summarizeCommandOptions(command) {
+  return (Array.isArray(command?.options) ? command.options : [])
+    .filter((option) => option && option.long !== "--help")
+    .map((option) => ({
+      flags: option.flags || "",
+      long: option.long || null,
+      short: option.short || null,
+      required: !!option.required,
+      optional: !!option.optional,
+      description: option.description || "",
+      defaultValue:
+        Object.prototype.hasOwnProperty.call(option, "defaultValue") &&
+        option.defaultValue !== undefined
+          ? option.defaultValue
+          : null,
+    }));
+}
+
+function summarizeCommandArguments(command) {
+  return (Array.isArray(command?.registeredArguments) ? command.registeredArguments : []).map(
+    (argument) => ({
+      name: typeof argument?.name === "function" ? argument.name() : argument?._name || "",
+      required: !!argument?.required,
+      variadic: !!argument?.variadic,
+      description: argument?.description || "",
+      defaultValue:
+        Object.prototype.hasOwnProperty.call(argument || {}, "defaultValue") &&
+        argument.defaultValue !== undefined
+          ? argument.defaultValue
+          : null,
+    })
+  );
+}
+
+function collectLeafCommandPaths(command, parentPath) {
+  const childCommands = Array.isArray(command?.commands) ? command.commands : [];
+  const paths = [];
+
+  for (const child of childCommands) {
+    const childPath = parentPath ? `${parentPath}/${child.name()}` : child.name();
+    const descendants = Array.isArray(child?.commands) ? child.commands : [];
+    if (descendants.length) {
+      paths.push(...collectLeafCommandPaths(child, childPath));
+    } else {
+      paths.push(childPath);
+    }
+  }
+
+  return paths;
+}
+
+function collectCapabilityRegistry(program) {
+  const registry = [];
+  const topLevel = [];
+  const groups = [];
+
+  function visit(parent, parentPath) {
+    const childCommands = Array.isArray(parent?.commands) ? parent.commands : [];
+
+    for (const child of childCommands) {
+      const name = child.name();
+      const path = parentPath ? `${parentPath}/${name}` : name;
+      const descendants = Array.isArray(child?.commands) ? child.commands : [];
+      const kind = descendants.length ? "group" : "command";
+      const entry = {
+        path,
+        name,
+        kind,
+        parentPath: parentPath || null,
+        depth: path ? path.split("/").length : 0,
+        description: child.description() || "",
+        aliases: typeof child.aliases === "function" ? child.aliases() : [],
+        options: summarizeCommandOptions(child),
+        arguments: summarizeCommandArguments(child),
+      };
+
+      registry.push(entry);
+
+      if (!parentPath) {
+        topLevel.push(entry);
+        if (kind === "group") {
+          groups.push({
+            path,
+            name,
+            description: entry.description,
+            aliases: entry.aliases,
+            commandCount: collectLeafCommandPaths(child, path).length,
+            leafPaths: collectLeafCommandPaths(child, path),
+          });
+        }
+      }
+
+      if (kind === "group") {
+        visit(child, path);
+      }
+    }
+  }
+
+  visit(program, "");
+
+  return {
+    registry,
+    topLevel,
+    groups,
+    topLevelCount: topLevel.length,
+    groupCount: groups.length,
+    commandCount: registry.filter((entry) => entry.kind === "command").length,
+  };
+}
+
+function buildCapabilitiesReport(program) {
+  const registry = collectCapabilityRegistry(program);
+  return {
+    ok: true,
+    kind: "capabilities",
+    title: "mnaipro capabilities",
+    summary: `${registry.commandCount} runnable commands across ${registry.groupCount} command groups.`,
+    commandSurface: "plugin_agent_cli",
+    commandCount: registry.commandCount,
+    groupCount: registry.groupCount,
+    topLevelCount: registry.topLevelCount,
+    globalOptions: summarizeCommandOptions(program),
+    topLevel: registry.topLevel,
+    groups: registry.groups,
+    registry: registry.registry,
+    recommendedCommands: [
+      "mnaipro capabilities --json",
+      "mnaipro status --compact",
+      "mnaipro doctor",
+      "mnaipro breakdown artifacts --json",
+    ],
+    warnings: [],
+  };
+}
+
+function formatCapabilitiesLines(report) {
+  const lines = [
+    report.title || "mnaipro capabilities",
+    `Summary: ${report.summary || "(none)"}`,
+    `Top-level entries: ${report.topLevelCount || 0}`,
+    `Command groups: ${report.groupCount || 0}`,
+    `Runnable commands: ${report.commandCount || 0}`,
+  ];
+
+  if (Array.isArray(report.topLevel) && report.topLevel.length) {
+    lines.push("", "Top-level:");
+    for (const entry of report.topLevel) {
+      lines.push(`- ${entry.path} | ${entry.kind} | ${entry.description || "no description"}`);
+    }
+  }
+
+  if (Array.isArray(report.groups) && report.groups.length) {
+    lines.push("", "Groups:");
+    for (const group of report.groups) {
+      lines.push(
+        `- ${group.path} | commands=${group.commandCount || 0} | ${group.description || "no description"}`
+      );
+    }
+  }
+
+  if (Array.isArray(report.registry) && report.registry.length) {
+    lines.push("", "Registry:");
+    for (const entry of report.registry) {
+      lines.push(`- ${entry.path} | ${entry.kind} | ${entry.description || "no description"}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function formatCapabilitiesCompact(report) {
+  return [
+    `commands=${report.commandCount || 0}`,
+    `groups=${report.groupCount || 0}`,
+    `topLevel=${report.topLevelCount || 0}`,
+    `surface=${report.commandSurface || "unknown"}`,
+  ].join(" ");
+}
+
+async function handleCapabilities(program, options) {
+  const report = buildCapabilitiesReport(program);
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatCapabilitiesCompact(report));
+    return;
+  }
+  outputText(formatCapabilitiesLines(report));
 }
 
 function collectReportInfo(kind) {
@@ -2045,6 +2238,18 @@ function createProgram() {
         return;
       }
       outputText(formatDoctorLines(report));
+    });
+
+  program
+    .command("capabilities")
+    .description("Inspect the CLI command registry and capability groups.")
+    .option("--json", "emit JSON output")
+    .option("--compact", "emit a compact single-line summary")
+    .action(async (cmd) => {
+      await handleCapabilities(program, {
+        json: !!cmd.json || !!program.opts().json,
+        compact: !!cmd.compact || !!program.opts().compact,
+      });
     });
 
   const bridge = new Command("bridge").description(

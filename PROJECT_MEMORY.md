@@ -23,6 +23,7 @@ Canonical long-term memory for this repository.
 
 ## Durable technical decisions
 - `mnaipro breakdown smoke` defaults to self-hosted mode and can reuse an explicit bridge via `--bridge-base-url` or `--base-url` before or after the subcommand.
+- `mnaipro capabilities` exposes the current `mnaipro` command registry and capability groups in a stable JSON/text shape.
 - `npm run check` remains the broad local validation command.
 - `npm run check:ci` is the CI-safe subset used by GitHub Actions.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.

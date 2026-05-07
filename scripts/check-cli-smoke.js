@@ -814,6 +814,76 @@ async function main() {
       { obsidianSyncSettings: mnaiproDoctor.obsidianSyncSettings || null }
     );
 
+    const mnaiproCapabilitiesResult = runCommand(
+      'mnaipro capabilities',
+      mnaiproCli,
+      ['capabilities', '--json']
+    );
+    const mnaiproCapabilities = parseJson('mnaipro capabilities', mnaiproCapabilitiesResult.stdout);
+    report.commands.push(summarizeCommand(mnaiproCapabilitiesResult, mnaiproCapabilities));
+    ensure(report, 'mnaipro capabilities ok', mnaiproCapabilities.ok === true, { kind: mnaiproCapabilities.kind });
+    ensure(report, 'mnaipro capabilities kind exposed', mnaiproCapabilities.kind === 'capabilities', {
+      kind: mnaiproCapabilities.kind,
+    });
+    ensure(
+      report,
+      'mnaipro capabilities registry exposed',
+      Array.isArray(mnaiproCapabilities.registry) && mnaiproCapabilities.registry.length > 0,
+      { registry: mnaiproCapabilities.registry || null }
+    );
+    ensure(
+      report,
+      'mnaipro capabilities groups exposed',
+      Array.isArray(mnaiproCapabilities.groups) && mnaiproCapabilities.groups.length > 0,
+      { groups: mnaiproCapabilities.groups || null }
+    );
+    ensure(
+      report,
+      'mnaipro capabilities command count exposed',
+      mnaiproCapabilities.commandCount === 19,
+      {
+        commandCount: mnaiproCapabilities.commandCount || 0,
+        topLevelCount: mnaiproCapabilities.topLevelCount || 0,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro capabilities group count exposed',
+      mnaiproCapabilities.groupCount === 8,
+      { groupCount: mnaiproCapabilities.groupCount || 0 }
+    );
+    ensure(
+      report,
+      'mnaipro capabilities bridge command exposed',
+      Array.isArray(mnaiproCapabilities.registry) &&
+        mnaiproCapabilities.registry.some(
+          (entry) => entry && entry.path === 'bridge/logs' && entry.kind === 'command'
+        ),
+      { registry: mnaiproCapabilities.registry || null }
+    );
+    ensure(
+      report,
+      'mnaipro capabilities top-level leaf exposed',
+      Array.isArray(mnaiproCapabilities.registry) &&
+        mnaiproCapabilities.registry.some(
+          (entry) => entry && entry.path === 'status' && entry.kind === 'command'
+        ),
+      { registry: mnaiproCapabilities.registry || null }
+    );
+    const mnaiproCapabilitiesCompactResult = runCommand(
+      'mnaipro capabilities --compact',
+      mnaiproCli,
+      ['capabilities', '--compact']
+    );
+    ensure(
+      report,
+      'mnaipro capabilities compact exposes summary',
+      /commands=19/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+        /groups=8/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+        /topLevel=11/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
+      { stdout: mnaiproCapabilitiesCompactResult.stdout || '' }
+    );
+
     const mnaiproFollowupResult = runCommand(
       'mnaipro followup latest',
       mnaiproCli,

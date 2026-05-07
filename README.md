@@ -21,6 +21,7 @@ It is split into two parts:
 - standalone CLI split
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
+  - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
   - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
   - `mn-obsidian-bridge` is the standalone read-write CLI for MarginNote ↔ Obsidian bridge diagnostics, including a stable `capabilities` registry command, a top-level `overview` evidence map, higher-level doctor/report evidence for Obsidian sync settings, plus patch-compatible or restorable settings snapshots and supported `ob settings export|restore|set|patch|reset` flows.
   - `marginnote-cli ai status` gives a compact native-AI health summary.
@@ -202,6 +203,15 @@ npm run diag:latest
 ```
 
 If the addon did not produce a standalone diagnostic artifact, that command now falls back to a bridge-derived session summary built from the latest request/response/plan/apply artifacts.
+
+Inspect the local `mnaipro` command surface itself:
+
+```bash
+mnaipro capabilities
+mnaipro capabilities --json
+```
+
+That registry mirrors the live commander tree, so it stays aligned with the actual `mnaipro` subcommands instead of relying on hand-maintained docs.
 
 Inspect the locally installed MarginNote 4 app for repeatable evidence of native AI prompt modules, tool contracts, UI signals, preferences, and container traces:
 
