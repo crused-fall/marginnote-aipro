@@ -15,13 +15,12 @@ Last updated: 2026-05-07
 - GitHub issue templates, pull request template, and CI workflow are in place.
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
 - The core GitHub label set has been created.
-- One open backlog item remains for release packaging.
 - The governance skeleton branch has a ready-for-review PR (#1).
 - The release-addon workflow now packages `.mnaddon` builds as artifacts and GitHub Release assets on tag pushes.
+- Issue #3 is closed after implementing the release packaging workflow and documenting the release path.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Resolve issue #3: decide whether to keep, adjust, or close the new release packaging workflow after review.
 - Decide whether the draft governance PR should be marked ready once the release packaging path is either merged or explicitly deferred.
 
 ## Last validated locally
