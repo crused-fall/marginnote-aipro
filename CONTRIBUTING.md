@@ -25,9 +25,13 @@ This repository uses a branch-and-PR workflow.
 - Use `priority:*` for urgency.
 - Use `status:*` for the current state of the work.
 
+## Releases
+- Build the addon archive with `npm run addon:build`.
+- Tag a release commit with a `v*` tag to publish the generated `.mnaddon` as a GitHub Release asset.
+- Use the `release-addon` workflow manually when you want a fresh packaged archive without publishing a tag.
+
 ## Issue hygiene
 - One issue should represent one actionable slice.
 - Write an explicit acceptance criterion.
 - Include validation commands or checks.
 - If the work is blocked, say what dependency is missing.
-

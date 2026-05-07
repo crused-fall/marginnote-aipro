@@ -27,6 +27,7 @@ Canonical long-term memory for this repository.
 - `npm run check:ci` is the CI-safe subset used by GitHub Actions.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
 - Release packaging should produce the `.mnaddon` archive outside version control, with git keeping source only.
+- The `release-addon` workflow uploads the built archive as a workflow artifact on every run and attaches it to a GitHub Release when the run is triggered by a `v*` tag.
 - Public docs should prefer stable repository-relative examples or environment variables over hard-coded machine paths when practical.
 
 ## Change discipline

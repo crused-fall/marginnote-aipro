@@ -85,6 +85,17 @@ function run(label, command, args) {
 function main() {
   let count = 0;
 
+  count += 1;
+  run("github workflow yaml parse", "ruby", [
+    "-e",
+    [
+      'require "yaml"',
+      'files = Dir[".github/**/*.yml", ".github/**/*.yaml"]',
+      'files.each { |f| YAML.load_file(f) }',
+      'puts "YAML ok: #{files.length} file(s)"',
+    ].join("; "),
+  ]);
+
   for (const relativePath of syntaxChecks) {
     count += 1;
     run(`node --check ${relativePath}`, process.execPath, [
@@ -102,4 +113,3 @@ function main() {
 }
 
 main();
-
