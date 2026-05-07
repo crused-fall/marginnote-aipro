@@ -1,6 +1,9 @@
-# Project Memory
+# Legacy Memory Archive
 
-Last updated: 2026-04-29
+Canonical long-term memory now lives in `PROJECT_MEMORY.md`.
+Current phase tracking lives in `PROJECT_STATUS.md`.
+
+Last updated: 2026-05-06
 
 ## Project Goal
 

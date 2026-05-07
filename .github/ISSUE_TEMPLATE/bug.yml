@@ -1,0 +1,59 @@
+name: Bug
+description: Report a regression or incorrect behavior.
+labels:
+  - type:bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repository does the bug affect?
+      options:
+        - addon
+        - cli
+        - bridge
+        - docs
+        - workflow
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened?
+      placeholder: Describe the incorrect result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+      placeholder: Describe the intended result.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: How can someone reproduce the issue?
+      placeholder: List the exact steps or command.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: What checks should confirm the fix?
+      placeholder: List the commands or tests that should pass.
+    validations:
+      required: true
+  - type: textarea
+    id: memory
+    attributes:
+      label: Memory impact
+      description: What durable decision or lesson should be recorded?
+      placeholder: Mention PROJECT_MEMORY.md or PROJECT_STATUS.md updates.
+    validations:
+      required: true
+

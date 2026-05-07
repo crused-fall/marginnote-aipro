@@ -44,6 +44,16 @@ It is split into two parts:
 - `docs/native-ai-supervision-matrix.md`
   A v1 decision matrix for which native MarginNote AI capabilities we should mirror, supervise, augment, or avoid hooking directly.
 
+## GitHub workflow
+
+This repository uses `main` as the merge branch.
+Small, verified fixes can land directly on `main`; larger slices should use a short-lived branch and a Draft PR.
+GitHub issues and PRs track collaboration state only.
+Long-term project memory lives in `PROJECT_MEMORY.md`, current phase tracking lives in `PROJECT_STATUS.md`, and repo-specific operating rules live in `AGENTS.md`.
+See `CONTRIBUTING.md` for the contributor workflow in one place.
+
+For validation, use `npm run check:ci` for the CI-safe subset and `npm run check` for the broader local suite.
+
 ## Why this split exists
 
 MarginNote addons can inspect notes and modify several note fields, but they are not a full general-purpose agent runtime. A local bridge gives you:
@@ -265,7 +275,7 @@ If you are validating the live addon wiring, run:
 npm run native-ai:breakdown-origin-check
 ```
 
-That source-level regression asserts both helper-blocked and normal apply envelopes in [`main.js`](/Users/cfall/Documents/Programs/Marginnote-AIpro/main.js) preserve `command`, `objective`, and `origin`, so Breakdown runs cannot silently collapse back into generic branch-organization apply artifacts.
+That source-level regression asserts both helper-blocked and normal apply envelopes in [`main.js`](main.js) preserve `command`, `objective`, and `origin`, so Breakdown runs cannot silently collapse back into generic branch-organization apply artifacts.
 
 Inspect bridge status and the latest artifact pointers through the local HTTP API:
 
@@ -291,8 +301,10 @@ The smoke now also checks each standalone CLI's `capabilities` registry command 
 
 If you want to verify each standalone CLI on its own, run these repo-local smoke entrypoints directly:
 
-- `cd ~/Documents/Programs/marginnote-cli && npm run smoke`
-- `cd ~/Documents/Programs/MN-Obsidian-bridge && npm run smoke`
+- `cd "$MARGINNOTE_CLI_ROOT" && npm run smoke`
+- `cd "$MN_OBSIDIAN_BRIDGE_ROOT" && npm run smoke`
+
+If those environment variables are not set, substitute your local checkout path.
 
 Those per-repo smoke commands use temporary domains / temporary vaults, so they can exercise real read-write behavior without touching your everyday settings.
 
@@ -398,6 +410,10 @@ To build a real `.mnaddon` package:
 ```bash
 npm run addon:build
 ```
+
+The generated `.mnaddon` archive is a local build artifact and is ignored by git.
+When you push a `v*` tag, the GitHub release workflow uploads the same archive as a workflow artifact and attaches it to the GitHub Release asset.
+You can also trigger that workflow manually from the Actions tab to produce a fresh package without publishing a tag.
 
 ## Local bridge diagnostics API
 

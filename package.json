@@ -42,6 +42,7 @@
     "cli:smoke": "node scripts/check-cli-smoke.js",
     "cli:smoke:json": "node scripts/check-cli-smoke.js --json",
     "cli:smoke:compact": "node scripts/check-cli-smoke.js --compact",
+    "check:ci": "node scripts/check-ci.js",
     "replay:latest": "node scripts/replay-requests.js --latest",
     "replay:after-apply": "node scripts/replay-after-apply.js",
     "replay:all": "node scripts/replay-requests.js --all",
