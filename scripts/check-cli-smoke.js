@@ -1128,6 +1128,39 @@ async function main() {
       { stdout: mnaiproFollowupApplyTextResult.stdout || '' }
     );
 
+    const mnaiproReplayAfterApplyResult = runCommand(
+      'mnaipro replay after-apply',
+      mnaiproCli,
+      ['replay', 'after-apply'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro replay after-apply text strategy pack summary exposed',
+      /Strategy packs:/.test(mnaiproReplayAfterApplyResult.stdout || '') &&
+        /Branch overview actions:/.test(mnaiproReplayAfterApplyResult.stdout || ''),
+      { stdout: mnaiproReplayAfterApplyResult.stdout || '' }
+    );
+    const mnaiproReplayAfterApplyCompactResult = runCommand(
+      'mnaipro replay after-apply --compact',
+      mnaiproCli,
+      ['replay', 'after-apply', '--compact'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro replay after-apply compact strategy pack summary exposed',
+      /packs=\d+/.test(mnaiproReplayAfterApplyCompactResult.stdout || '') &&
+        /overview=\d+/.test(mnaiproReplayAfterApplyCompactResult.stdout || ''),
+      { stdout: mnaiproReplayAfterApplyCompactResult.stdout || '' }
+    );
+
     const mnaiproBreakdownArtifactsResult = runCommand(
       'mnaipro breakdown artifacts',
       mnaiproCli,

@@ -2,6 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { planResponse } = require("../bridge/planner");
+const { summarizePlanPlan } = require("../cli/mnaipro");
 
 const REPORTS_DIR =
   process.env.MN_AGENT_REPORTS_DIR ||
@@ -63,6 +64,7 @@ function summarize(planInfo, applyInfo) {
   (plan.actions || []).forEach((action) => {
     actionTypes[action.type] = (actionTypes[action.type] || 0) + 1;
   });
+  const summary = summarizePlanPlan(plan);
   const origin = plan.origin || "";
   const mode = origin === "native_ai_breakdown" ? "breakdown" : "primary";
   const command = applyInfo.report?.command || applyInfo.report?.objective || "(unknown)";
@@ -73,10 +75,41 @@ function summarize(planInfo, applyInfo) {
     `Command: ${command}`,
     `Mode: ${mode}`,
     `Origin: ${origin || "(none)"}`,
-    `After-apply replay actions: ${(plan.actions || []).length}`,
-    `Warnings: ${(plan.notes || []).length}`,
-    `Unsupported: ${(plan.unsupportedActions || []).length}`,
+    `After-apply replay actions: ${summary.actionCount}`,
+    `Warnings: ${summary.warningCount}`,
+    `Unsupported: ${summary.unsupportedCount}`,
+    `Strategy packs: ${summary.strategyPackCount}`,
   ];
+
+  if (summary.primaryStrategyPack) {
+    const primary = summary.primaryStrategyPack;
+    lines.push(
+      `Primary strategy: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+    );
+    if (primary.summary) {
+      lines.push(`Primary summary: ${primary.summary}`);
+    }
+    if (primary.reason) {
+      lines.push(`Primary reason: ${primary.reason}`);
+    }
+  }
+
+  if (summary.branchOverviewActionCount > 0) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${summary.branchOverviewActionCount}`);
+    (plan.actions || [])
+      .filter(
+        (action) =>
+          action && action.type === "rewrite_excerpt" && action.meta?.source === "branch_structure_digest"
+      )
+      .slice(0, 12)
+      .forEach((action) => {
+        const overviewText = String(action.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+        lines.push(
+          `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+        );
+      });
+  }
 
   const typeKeys = Object.keys(actionTypes);
   if (typeKeys.length) {

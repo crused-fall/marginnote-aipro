@@ -378,6 +378,7 @@ The CLI currently exposes:
 They now also surface the local Breakdown artifact audit by default, including the top-level `complete` / `partial` / `missing` state.
 `mnaipro followup latest` now also shows the current replay summary beside the stored follow-up artifact, so older follow-up records can still be compared against the latest planner semantics.
 The local bridge now mirrors that replay summary in `GET /status` and `GET /reports/latest?kind=followup`, so the live diagnostics surface stays aligned with the CLI.
+`mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay keep the same vocabulary as live follow-up output.
 
 See `docs/bridge-ops-quickstart.md` for the bridge deployment flow and the fastest recovery path.
 

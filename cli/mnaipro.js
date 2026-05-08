@@ -957,17 +957,48 @@ function replayRequest(requestInfo) {
 }
 
 function formatReplayLines(result) {
+  const generatedSummary = summarizePlanPlan(result.generated?.plan || {});
+  const cachedSummary = result.cached ? summarizePlanPlan(result.cached?.plan || {}) : null;
   const lines = [
     `Request: ${result.request}`,
     `Path: ${result.requestPath}`,
     `Status: ${result.comparison.matches ? "MATCH" : "DIFF"}`,
     `Reason: ${result.comparison.reason}`,
-    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}`,
+    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}, packs=${generatedSummary.strategyPackCount}, overview=${generatedSummary.branchOverviewActionCount}`,
   ];
 
+  if (generatedSummary.strategyPackCount > 0) {
+    lines.push("", "Strategy packs:");
+    lines.push(`- count: ${generatedSummary.strategyPackCount}`);
+    if (generatedSummary.primaryStrategyPack) {
+      const primary = generatedSummary.primaryStrategyPack;
+      lines.push(
+        `- primary: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+      );
+      if (primary.summary) {
+        lines.push(`- summary: ${primary.summary}`);
+      }
+      if (primary.reason) {
+        lines.push(`- reason: ${primary.reason}`);
+      }
+    }
+  }
+
+  if (generatedSummary.branchOverviewActionCount > 0) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${generatedSummary.branchOverviewActionCount}`);
+    collectBranchOverviewActions(result.generated?.plan?.actions || []).slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
+  }
+
   if (result.comparison.cached) {
+    const cachedLine = `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}, packs=${cachedSummary.strategyPackCount}, overview=${cachedSummary.branchOverviewActionCount}`;
     lines.push(
-      `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}`
+      cachedLine
     );
   }
 
@@ -975,14 +1006,16 @@ function formatReplayLines(result) {
 }
 
 function formatReplayCompact(result) {
+  const generatedSummary = summarizePlanPlan(result.generated?.plan || {});
+  const cachedSummary = result.cached ? summarizePlanPlan(result.cached?.plan || {}) : null;
   const cached = result.comparison.cached
-    ? ` cached=actions:${result.comparison.cached.actions},notes:${result.comparison.cached.notes},unsupported:${result.comparison.cached.unsupportedActions}`
+    ? ` cached=actions:${result.comparison.cached.actions},notes:${result.comparison.cached.notes},unsupported:${result.comparison.cached.unsupportedActions},packs:${cachedSummary.strategyPackCount},overview:${cachedSummary.branchOverviewActionCount}`
     : "";
   return [
     `request=${result.request}`,
     `status=${result.comparison.matches ? "MATCH" : "DIFF"}`,
     `reason=${result.comparison.reason}`,
-    `generated=actions:${result.comparison.generated.actions},notes:${result.comparison.generated.notes},unsupported:${result.comparison.generated.unsupportedActions}`,
+    `generated=actions:${result.comparison.generated.actions},notes:${result.comparison.generated.notes},unsupported:${result.comparison.generated.unsupportedActions},packs:${generatedSummary.strategyPackCount},overview:${generatedSummary.branchOverviewActionCount}`,
     cached,
   ]
     .filter(Boolean)
@@ -2331,6 +2364,7 @@ async function handleReplayAfterApply(options) {
     dryRun: true,
     nodes,
   });
+  const summary = summarizePlanPlan(generated.plan);
 
   const payload = {
     ok: true,
@@ -2341,7 +2375,7 @@ async function handleReplayAfterApply(options) {
       report: applyInfo.report,
     },
     generated,
-    summary: summarizePlanPlan(generated.plan),
+    summary,
   };
 
   if (options.json) {
@@ -2351,7 +2385,7 @@ async function handleReplayAfterApply(options) {
 
   if (options.compact) {
     outputText(
-      `apply=${applyInfo.file} actions=${generated.plan.actions.length} warnings=${generated.plan.notes.length} unsupported=${generated.plan.unsupportedActions.length} origin=${applyInfo.report?.origin || "none"}`
+      `apply=${applyInfo.file} actions=${summary.actionCount} warnings=${summary.warningCount} unsupported=${summary.unsupportedCount} packs=${summary.strategyPackCount} overview=${summary.branchOverviewActionCount} origin=${applyInfo.report?.origin || "none"}`
     );
     return;
   }
@@ -2362,10 +2396,27 @@ async function handleReplayAfterApply(options) {
     `Command: ${applyInfo.report?.command || applyInfo.report?.objective || "(unknown)"}`,
     `Mode: ${applyInfo.report?.origin === "native_ai_breakdown" ? "breakdown" : "primary"}`,
     `Origin: ${applyInfo.report?.origin || "(none)"}`,
-    `After-apply replay actions: ${generated.plan.actions.length}`,
-    `Warnings: ${generated.plan.notes.length}`,
-    `Unsupported: ${generated.plan.unsupportedActions.length}`,
+    `After-apply replay actions: ${summary.actionCount}`,
+    `Warnings: ${summary.warningCount}`,
+    `Unsupported: ${summary.unsupportedCount}`,
+    `Strategy packs: ${summary.strategyPackCount}`,
   ];
+  if (summary.primaryStrategyPack) {
+    const primary = summary.primaryStrategyPack;
+    lines.push(
+      `Primary strategy: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+    );
+  }
+  if (summary.branchOverviewActionCount) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${summary.branchOverviewActionCount}`);
+    collectBranchOverviewActions(generated.plan.actions || []).slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
+  }
   if (generated.plan.actions.length) {
     lines.push("", "Preview:");
   }

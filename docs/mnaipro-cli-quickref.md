@@ -89,6 +89,7 @@ When the local bridge supervisor has recorded lifecycle state, those same compac
 `mnaipro status --compact` and `mnaipro doctor --compact` now also emit `followup_apply=1` plus `followup_apply_request=...` when that follow-up apply artifact exists, so the one-line health view keeps the second-stage execution snapshot visible too.
 `mnaipro doctor --json` now also carries `latestFollowupApply` when that second-stage execution artifact exists, so the higher-level health view can point at the same follow-up apply snapshot.
 `mnaipro followup latest` now also shows the current replay summary beside the stored follow-up artifact, which makes old follow-up snapshots easier to compare against today’s planner output.
+`mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay stay aligned with live follow-up vocabulary.
 
 If you are checking live addon wiring instead of replay output, run:
 

@@ -2,6 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { planResponse } = require("../bridge/planner");
+const { summarizePlanPlan } = require("../cli/mnaipro");
 
 const BRIDGE_DIR =
   process.env.MN_AGENT_BRIDGE_DIR ||
@@ -81,6 +82,12 @@ function summarizePlan(plan) {
     unsupportedActions: Array.isArray(plan?.unsupportedActions)
       ? plan.unsupportedActions.length
       : 0,
+    strategyPackCount: Array.isArray(plan?.strategyPacks) ? plan.strategyPacks.length : 0,
+    branchOverviewActionCount: Array.isArray(plan?.actions)
+      ? plan.actions.filter(
+          (action) => action && action.type === "rewrite_excerpt" && action.meta?.source === "branch_structure_digest"
+        ).length
+      : 0,
   };
 }
 
@@ -128,22 +135,61 @@ function replayRequest(requestInfo) {
   return {
     request: requestInfo.file,
     requestPath: requestInfo.fullPath,
+    payload,
+    generated,
+    cached,
     comparison,
   };
 }
 
 function formatResult(result) {
+  const generatedSummary = summarizePlanPlan(result.generated.plan || {});
+  const cachedSummary = result.cached ? summarizePlanPlan(result.cached.plan || {}) : null;
   const lines = [
     `Request: ${result.request}`,
     `Path: ${result.requestPath}`,
     `Status: ${result.comparison.matches ? "MATCH" : "DIFF"}`,
     `Reason: ${result.comparison.reason}`,
-    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}`,
+    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}, packs=${generatedSummary.strategyPackCount}, overview=${generatedSummary.branchOverviewActionCount}`,
   ];
+
+  if (generatedSummary.strategyPackCount > 0) {
+    lines.push("", "Strategy packs:");
+    lines.push(`- count: ${generatedSummary.strategyPackCount}`);
+    if (generatedSummary.primaryStrategyPack) {
+      const primary = generatedSummary.primaryStrategyPack;
+      lines.push(
+        `- primary: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+      );
+      if (primary.summary) {
+        lines.push(`- summary: ${primary.summary}`);
+      }
+      if (primary.reason) {
+        lines.push(`- reason: ${primary.reason}`);
+      }
+    }
+  }
+
+  if (generatedSummary.branchOverviewActionCount > 0) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${generatedSummary.branchOverviewActionCount}`);
+    (result.generated.plan.actions || [])
+      .filter(
+        (action) =>
+          action && action.type === "rewrite_excerpt" && action.meta?.source === "branch_structure_digest"
+      )
+      .slice(0, 10)
+      .forEach((action) => {
+        const overviewText = String(action.text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+        lines.push(
+          `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+        );
+      });
+  }
 
   if (result.comparison.cached) {
     lines.push(
-      `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}`
+      `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}, packs=${cachedSummary.strategyPackCount}, overview=${cachedSummary.branchOverviewActionCount}`
     );
   }
 
