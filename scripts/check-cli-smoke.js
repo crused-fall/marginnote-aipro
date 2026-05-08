@@ -280,17 +280,24 @@ function createTemporaryBreakdownArtifacts(rootDir) {
     unsupportedActions: [],
     strategyPacks: [{ type: 'visual_branch_strategy' }],
   });
-  writeTempJsonFile(reportsDir, `mnaipro-${requestId}-followup-apply-5000000000101.json`, {
-    origin: 'native_ai_breakdown',
-    command: '整理 AI Breakdown 分支',
-    objective: '整理 AI Breakdown 分支',
-    rootNoteId: 'bd-root',
-    actionCount: 1,
-    results: [{ ok: true, type: 'rewrite_excerpt', noteId: 'bd-root' }],
-    afterBranch: {
-      notes: sampleBreakdownNodes(),
-    },
-  });
+    writeTempJsonFile(reportsDir, `mnaipro-${requestId}-followup-apply-5000000000101.json`, {
+      origin: 'native_ai_breakdown',
+      command: '整理 AI Breakdown 分支',
+      objective: '整理 AI Breakdown 分支',
+      rootNoteId: 'bd-root',
+      actionCount: 1,
+      results: [
+        {
+          ok: true,
+          type: 'rewrite_excerpt',
+          noteId: 'bd-root',
+          planSource: 'branch_structure_digest',
+        },
+      ],
+      afterBranch: {
+        notes: sampleBreakdownNodes(),
+      },
+    });
 
   return {
     root: artifactRoot,
@@ -1042,6 +1049,22 @@ async function main() {
         /replay_overview=\d+/.test(mnaiproFollowupCompactResult.stdout || ''),
       { stdout: mnaiproFollowupCompactResult.stdout || '' }
     );
+    const mnaiproFollowupTextResult = runCommand(
+      'mnaipro followup latest',
+      mnaiproCli,
+      ['followup', 'latest'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro followup latest text branch overview exposed',
+      /Branch overview actions:/.test(mnaiproFollowupTextResult.stdout || '') &&
+        /branch overview fills:/.test(mnaiproFollowupTextResult.stdout || ''),
+      { stdout: mnaiproFollowupTextResult.stdout || '' }
+    );
 
     const mnaiproFollowupApplyResult = runCommand(
       'mnaipro followup apply latest',
@@ -1088,6 +1111,21 @@ async function main() {
       'mnaipro followup apply latest compact overview hint exposed',
       /overview_fills=\d+/.test(mnaiproFollowupApplyCompactResult.stdout || ''),
       { stdout: mnaiproFollowupApplyCompactResult.stdout || '' }
+    );
+    const mnaiproFollowupApplyTextResult = runCommand(
+      'mnaipro followup apply latest',
+      mnaiproCli,
+      ['followup', 'apply', 'latest'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro followup apply latest text branch overview exposed',
+      /Branch overview fills:/.test(mnaiproFollowupApplyTextResult.stdout || ''),
+      { stdout: mnaiproFollowupApplyTextResult.stdout || '' }
     );
 
     const mnaiproBreakdownArtifactsResult = runCommand(
