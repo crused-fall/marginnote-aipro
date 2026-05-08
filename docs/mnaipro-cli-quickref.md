@@ -33,6 +33,16 @@ mnaipro request post /model/replay --body '{"traceId":"<trace-id>","dryRun":true
 
 `mnaipro request post /model/run` is the preview-safe entrypoint into the provider-agnostic model backend. It defaults to dry-run behavior unless you intentionally opt into a real provider call through the bridge configuration.
 
+## Experimental gate
+
+```bash
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental status --json
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental diagnostics --json
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental registry --json
+```
+
+Those commands stay hidden until the gate is enabled. They report the experimental mode, configured private command names, the latest diagnostic evidence, and the gated command registry for the current session without changing the stable command surface.
+
 ## Bridge commands
 
 ```bash

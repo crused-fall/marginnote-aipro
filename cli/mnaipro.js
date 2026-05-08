@@ -18,6 +18,21 @@ const {
 const { summarizeObsidianSyncSettings } = require("../bridge/obsidian-sync");
 const { planResponse } = require("../bridge/planner");
 const { buildBreakdownArtifactAudit } = require("../bridge/breakdown-artifact-audit");
+const {
+  buildExperimentalState,
+  formatExperimentalCompact,
+  formatExperimentalLines,
+} = require("../bridge/experimental/gate");
+const {
+  buildExperimentalDiagnosticsReport,
+  formatExperimentalDiagnosticsCompact,
+  formatExperimentalDiagnosticsLines,
+} = require("../bridge/experimental/diagnostics");
+const {
+  buildExperimentalRegistryReport,
+  formatExperimentalRegistryCompact,
+  formatExperimentalRegistryLines,
+} = require("../bridge/experimental/registry");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const DEFAULT_BASE_URL = process.env.MN_AGENT_BASE_URL || "http://127.0.0.1:8765";
@@ -70,6 +85,17 @@ function isBranchOverviewAction(action) {
 
 function collectBranchOverviewActions(actions) {
   return (Array.isArray(actions) ? actions : []).filter(isBranchOverviewAction);
+}
+
+function buildExperimentalSurfaceSection(experimentalState) {
+  return {
+    label: "Experimental",
+    prefix: "mnaipro experimental",
+    commands: ["status", "diagnostics", "registry"],
+    summary: experimentalState.enabled
+      ? "Opt-in experimental gate, status, diagnostics, and registry."
+      : "Opt-in experimental gate is disabled.",
+  };
 }
 
 function summarizeBreakdownAuditInline(audit) {
@@ -1680,9 +1706,8 @@ function bridgeHelpFooter() {
   ].join("\n");
 }
 
-function buildCommandSurfaceDocs() {
-  return {
-    sections: [
+function buildCommandSurfaceDocs(experimentalState = buildExperimentalState(process.env)) {
+  const sections = [
       {
         label: "Overview",
         prefix: "mnaipro",
@@ -1727,27 +1752,42 @@ function buildCommandSurfaceDocs() {
         commands: ["get /status", "post /model/run", "post /model/replay"],
         summary: "Raw bridge request passthrough for read and execute surfaces.",
       },
-    ],
+    ];
+
+  if (experimentalState.enabled) {
+    sections.push(buildExperimentalSurfaceSection(experimentalState));
+  }
+
+  const commonFlows = [
+    "mnaipro overview --json",
+    "mnaipro bridge doctor",
+    "mnaipro bridge reload",
+    "mnaipro bridge logs --follow --interval 2",
+    "mnaipro breakdown smoke --json",
+    "mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
+    "mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
+    "mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
+    "mnaipro breakdown postprocess",
+    "mnaipro breakdown artifacts --json",
+    "mnaipro request get /model/latest",
+    "mnaipro request post /model/run --body '{\"dryRun\":true}'",
+    "mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
+  ];
+
+  if (experimentalState.enabled) {
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental status --json");
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental diagnostics --json");
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental registry --json");
+  }
+
+  return {
+    sections,
     discovery: {
       label: "Discovery",
       command: "mnaipro capabilities --json",
       summary: "Inspect the CLI command registry and capability groups.",
     },
-    commonFlows: [
-      "mnaipro overview --json",
-      "mnaipro bridge doctor",
-      "mnaipro bridge reload",
-      "mnaipro bridge logs --follow --interval 2",
-      "mnaipro breakdown smoke --json",
-      "mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
-      "mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
-      "mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
-      "mnaipro breakdown postprocess",
-      "mnaipro breakdown artifacts --json",
-      "mnaipro request get /model/latest",
-      "mnaipro request post /model/run --body '{\"dryRun\":true}'",
-      "mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
-    ],
+    commonFlows,
   };
 }
 
@@ -1773,8 +1813,8 @@ function formatCommandSurfaceFooter(surfaceDocs = buildCommandSurfaceDocs()) {
   ].join("\n");
 }
 
-function topLevelHelpFooter() {
-  return formatCommandSurfaceFooter();
+function topLevelHelpFooter(experimentalState = buildExperimentalState(process.env)) {
+  return formatCommandSurfaceFooter(buildCommandSurfaceDocs(experimentalState));
 }
 
 function summarizeCommandOptions(command) {
@@ -1887,9 +1927,21 @@ function collectCapabilityRegistry(program) {
   };
 }
 
-function buildCapabilitiesReport(program) {
+function buildCapabilitiesReport(program, experimentalState = buildExperimentalState(process.env)) {
   const registry = collectCapabilityRegistry(program);
-  const surfaceDocs = buildCommandSurfaceDocs();
+  const surfaceDocs = buildCommandSurfaceDocs(experimentalState);
+  const recommendedCommands = [
+    "mnaipro overview --json",
+    "mnaipro capabilities --json",
+    "mnaipro status --compact",
+    "mnaipro doctor",
+    "mnaipro breakdown artifacts --json",
+  ];
+  if (experimentalState.enabled) {
+    recommendedCommands.push("mnaipro experimental status --json");
+    recommendedCommands.push("mnaipro experimental diagnostics --json");
+    recommendedCommands.push("mnaipro experimental registry --json");
+  }
   return {
     ok: true,
     kind: "capabilities",
@@ -1904,13 +1956,7 @@ function buildCapabilitiesReport(program) {
     groups: registry.groups,
     registry: registry.registry,
     surfaceDocs,
-    recommendedCommands: [
-      "mnaipro overview --json",
-      "mnaipro capabilities --json",
-      "mnaipro status --compact",
-      "mnaipro doctor",
-      "mnaipro breakdown artifacts --json",
-    ],
+    recommendedCommands,
     warnings: [],
   };
 }
@@ -1959,8 +2005,8 @@ function formatCapabilitiesCompact(report) {
   ].join(" ");
 }
 
-async function handleCapabilities(program, options) {
-  const report = buildCapabilitiesReport(program);
+async function handleCapabilities(program, options, experimentalState = buildExperimentalState(process.env)) {
+  const report = buildCapabilitiesReport(program, experimentalState);
   if (options.json) {
     outputJson(report);
     return;
@@ -1970,6 +2016,45 @@ async function handleCapabilities(program, options) {
     return;
   }
   outputText(formatCapabilitiesLines(report));
+}
+
+async function handleExperimentalStatus(experimentalState, options) {
+  const report = experimentalState;
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalCompact(report));
+    return;
+  }
+  outputText(formatExperimentalLines(report));
+}
+
+async function handleExperimentalDiagnostics(options) {
+  const report = buildExperimentalDiagnosticsReport(process.env);
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalDiagnosticsCompact(report));
+    return;
+  }
+  outputText(formatExperimentalDiagnosticsLines(report));
+}
+
+async function handleExperimentalRegistry(options) {
+  const report = buildExperimentalRegistryReport(process.env);
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalRegistryCompact(report));
+    return;
+  }
+  outputText(formatExperimentalRegistryLines(report));
 }
 
 async function handleOverview(program, options) {
@@ -2733,6 +2818,7 @@ async function handleBridgeLogs(options) {
 
 function createProgram() {
   const program = new Command();
+  const experimentalState = buildExperimentalState(process.env);
   program.name("mnaipro");
   program.description("Local MarginNote agent CLI for bridge status, reports, replay, and smoke checks.");
   program.option("--base-url <url>", "bridge base URL", DEFAULT_BASE_URL);
@@ -2823,6 +2909,46 @@ function createProgram() {
         compact: !!cmd.compact || !!program.opts().compact,
       });
     });
+
+  if (experimentalState.enabled) {
+    const experimental = new Command("experimental").description(
+      "Opt-in experimental and private command surfaces."
+    );
+    experimental
+      .command("status")
+      .description("Inspect the current experimental gate state.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalStatus(experimentalState, {
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    experimental
+      .command("diagnostics")
+      .description("Inspect the latest experimental/runtime diagnostic evidence.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalDiagnostics({
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    experimental
+      .command("registry")
+      .description("Inspect the available gated experimental command registry.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalRegistry({
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    program.addCommand(experimental);
+  }
 
   const bridge = new Command("bridge").description(
     "Bridge lifecycle commands for deploy, status, and local health checks."
@@ -3119,7 +3245,7 @@ function createProgram() {
   program.addCommand(request);
 
   program.addHelpText("afterAll", ({ command }) =>
-    command === program ? topLevelHelpFooter() : ""
+    command === program ? topLevelHelpFooter(experimentalState) : ""
   );
   bridge.addHelpText("afterAll", ({ command }) => (command === bridge ? bridgeHelpFooter() : ""));
 

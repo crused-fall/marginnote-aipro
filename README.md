@@ -25,6 +25,7 @@ It is split into two parts:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
   - `mnaipro request get|post` exposes raw bridge passthrough, including the model backend endpoints when you need direct inspection or replay.
+  - `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` are opt-in surfaces that stay hidden until `MNAIPRO_EXPERIMENTAL=1` is set; they report the experimental gate state, latest diagnostic evidence, and gated command registry without changing stable behavior.
   - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
   - `marginnote-cli overview` gives a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
   - `marginnote-cli capabilities` and `marginnote-cli --help` now share the same `surfaceDocs` catalog.
@@ -318,8 +319,11 @@ npm run cli:smoke
 ```
 
 Use `npm run cli:smoke:json` for structured output or `npm run cli:smoke:compact` for a one-line status.
+Use `npm run cli:smoke:portable` if you want to force the CI-safe portable mode locally.
+Run `node scripts/check-cli-smoke.js --help` to see the portable fallback and root override flags.
 
 The smoke now also checks each standalone CLI's `capabilities` registry command so command-surface drift gets caught early.
+In CI, or when the sibling `marginnote-cli` / `MN-Obsidian-Bridge` checkouts are not present, the same smoke command auto-falls back to portable mode and keeps the repo-local bridge / `mnaipro` coverage running without depending on those extra repos.
 
 If you want to verify each standalone CLI on its own, run these repo-local smoke entrypoints directly:
 
@@ -379,6 +383,7 @@ They now also surface the local Breakdown artifact audit by default, including t
 `mnaipro followup latest` now also shows the current replay summary beside the stored follow-up artifact, so older follow-up records can still be compared against the latest planner semantics.
 The local bridge now mirrors that replay summary in `GET /status` and `GET /reports/latest?kind=followup`, so the live diagnostics surface stays aligned with the CLI.
 `mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay keep the same vocabulary as live follow-up output.
+`mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` stay hidden by default. Set `MNAIPRO_EXPERIMENTAL=1` to expose the opt-in experimental gate, and use `MNAIPRO_EXPERIMENTAL_COMMANDS` to list configured private command names for that session.
 
 See `docs/bridge-ops-quickstart.md` for the bridge deployment flow and the fastest recovery path.
 
@@ -437,7 +442,7 @@ npm run addon:build
 ```
 
 The generated `.mnaddon` archive is a local build artifact and is ignored by git.
-When you push a `v*` tag, the GitHub release workflow uploads the same archive as a workflow artifact and attaches it to the GitHub Release asset.
+When you push a `v*` tag, the GitHub release workflow first runs `npm run check:ci`, then builds the same archive, uploads it as a workflow artifact, and attaches it to the GitHub Release asset.
 You can also trigger that workflow manually from the Actions tab to produce a fresh package without publishing a tag.
 
 ## Local bridge diagnostics API
