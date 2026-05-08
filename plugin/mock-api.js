@@ -29,6 +29,38 @@ class MockNode {
     this.commentsText.push(...comments);
   }
 
+  appendTextComment(comment) {
+    this.appendTextComments(comment);
+  }
+
+  getCommentIndex(comment) {
+    const target = String(comment || "").trim();
+    if (!target) return -1;
+    return this.commentsText.findIndex((item) => String(item || "").indexOf(target) >= 0);
+  }
+
+  removeCommentByIndex(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.commentsText.length) {
+      return;
+    }
+    this.commentsText.splice(index, 1);
+  }
+
+  removeCommentByCondition(condition = {}) {
+    const include = String(condition.include || "").trim();
+    const exclude = String(condition.exclude || "").trim();
+    const reg = String(condition.reg || "").trim();
+    const pattern = include || reg;
+    if (!pattern) return;
+    this.commentsText = this.commentsText.filter((comment) => {
+      const text = String(comment || "");
+      if (exclude && text.indexOf(exclude) >= 0) {
+        return true;
+      }
+      return text.indexOf(pattern) < 0;
+    });
+  }
+
   createChildNote(config = {}) {
     const child = new MockNode({
       noteId: `mock-${MockNode.nextId++}`,

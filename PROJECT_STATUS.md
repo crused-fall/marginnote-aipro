@@ -1,10 +1,11 @@
 # Project Status
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ## Current phase
 - Bridge model-backend slice complete and locally verified.
 - The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is the remaining `mnaipro` hardening pass.
+- The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.
@@ -30,6 +31,7 @@ Last updated: 2026-05-07
 - `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` now surface model-backend readiness and latest execution evidence alongside the existing Breakdown and bridge health signals.
 - `mnaipro request get|post` now advertises the provider-agnostic model backend routes, including preview `/model/run`, replay `/model/replay`, and latest-trace `/model/latest`.
 - `npm run native-ai:templates` now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization, keeping the template governance report preview-only and read-only.
+- `plugin/agent-core.js` now has comment-removal parity with the stable addon shell, including a dedicated focused regression path in `scripts/check-plugin-agent-core.js`.
 - No open GitHub issues remain.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
@@ -45,3 +47,7 @@ Last updated: 2026-05-07
 - `npm run check:ci`
 - `npm run check`
 - `npm run addon:build`
+- `node --check plugin/agent-core.js`
+- `node --check plugin/mock-api.js`
+- `node --check scripts/check-plugin-agent-core.js`
+- `node scripts/check-plugin-agent-core.js`

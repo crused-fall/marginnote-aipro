@@ -29,6 +29,7 @@ Canonical long-term memory for this repository.
 - `bridge/model-backend.js` is a provider-agnostic execution surface with preview/dry-run default behavior, trace persistence, replay hooks, and `/model/run`, `/model/replay`, and `/model/latest` endpoints.
 - `mnaipro request post /model/run` is the supported raw preview entrypoint into that model backend, `mnaipro request post /model/replay` is the supported replay entrypoint, and `mnaipro request get /model/latest` is the supported latest-trace inspection path.
 - `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` surface model-backend readiness and latest execution evidence so operators can see the backend state without leaving the main CLI.
+- `plugin/agent-core.js` now mirrors the stable addon shell for `remove_comments_by_text` by trying `removeCommentByIndex`, `getCommentIndex + removeCommentByIndex`, `removeCommentByCondition`, and raw comment-array fallbacks in that order, with `scripts/check-plugin-agent-core.js` as the focused parity regression.
 - `marginnote-cli overview` is the top-level MarginNote-native evidence map, combining app inspection, doctor, AI overview, and capabilities in one stable report.
 - `marginnote-cli capabilities` now also exposes a shared `surfaceDocs` command-surface catalog so `capabilities` and `--help` stay aligned.
 - `mn-obsidian-bridge capabilities` and `mn-obsidian-bridge --help` now share a `surfaceDocs` command-surface catalog so the bridge help footer stays aligned with the live registry.

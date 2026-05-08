@@ -37,6 +37,7 @@ const syntaxChecks = [
   "scripts/check-bridge-status-breakdown-surface.js",
   "scripts/check-cli-breakdown-audit-surface.js",
   "scripts/check-main-breakdown-origin.js",
+  "scripts/check-plugin-agent-core.js",
   "scripts/bridge-status.js",
   "scripts/bridge-doctor.js",
   "scripts/reload-launch-agent.js",
@@ -54,6 +55,7 @@ const scriptChecks = [
   ["bridge status breakdown surface", "scripts/check-bridge-status-breakdown-surface.js"],
   ["cli breakdown audit surface", "scripts/check-cli-breakdown-audit-surface.js"],
   ["main breakdown origin", "scripts/check-main-breakdown-origin.js"],
+  ["plugin agent core", "scripts/check-plugin-agent-core.js"],
 ];
 
 if (process.platform === "darwin") {
