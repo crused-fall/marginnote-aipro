@@ -188,6 +188,7 @@ When a structural apply does run, the apply artifact now also records which crea
 After a successful live apply, the addon now also requests one immediate follow-up plan from the post-apply branch snapshot and saves it as a separate follow-up artifact, so we can inspect the likely second-stage enrich actions without asking for another manual run first.
 When that follow-up plan is only the visible `branch_structure_digest` excerpt-fill action, the addon now immediately applies that second stage as well and writes a separate follow-up apply artifact.
 If a follow-up pass would now only add invisible semantic tags to those freshly summarized branch nodes, the planner suppresses that output entirely so stage two stays quiet instead of generating low-value churn.
+`mnaipro followup latest` and `mnaipro followup apply latest` now also surface explicit branch-overview action/fill counts when that second stage comes from `branch_structure_digest`, so the second-stage output reads like a branch overview instead of a generic excerpt fill.
 
 Inspect the latest follow-up artifact directly, or derive the same follow-up plan from the newest apply artifact when no stored follow-up file exists yet:
 

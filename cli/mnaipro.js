@@ -60,6 +60,18 @@ function compactText(value) {
     .trim();
 }
 
+function isBranchOverviewAction(action) {
+  return (
+    !!action &&
+    action.type === "rewrite_excerpt" &&
+    action.meta?.source === "branch_structure_digest"
+  );
+}
+
+function collectBranchOverviewActions(actions) {
+  return (Array.isArray(actions) ? actions : []).filter(isBranchOverviewAction);
+}
+
 function summarizeBreakdownAuditInline(audit) {
   if (!audit) return "unknown";
   const primary =
@@ -246,6 +258,7 @@ function summarizePlanPlan(plan) {
   const counts = plan?.actionDispositionCounts || {};
   const phaseCounts = plan?.actionPhaseCounts || {};
   const primaryPack = packs[0] || null;
+  const branchOverviewActions = collectBranchOverviewActions(actions);
 
   return {
     objective: plan?.objective || null,
@@ -262,6 +275,7 @@ function summarizePlanPlan(plan) {
     actionDispositionCounts: counts,
     actionPhaseCounts: phaseCounts,
     shapeSummary: plan?.shapeSummary || null,
+    branchOverviewActionCount: branchOverviewActions.length,
     primaryStrategyPack: primaryPack
       ? {
           type: primaryPack.type || null,
@@ -516,6 +530,9 @@ function formatApplyLines(reportInfo) {
   const skippedCount = results.filter((item) => item.skipped).length;
   const errorItems = results.filter((item) => item.error);
   const changedNotes = report.branchDiff?.changedNotes || [];
+  const overviewFillResults = results.filter(
+    (item) => item.type === "rewrite_excerpt" && item.planSource === "branch_structure_digest"
+  );
   const origin = report.origin || "";
   const mode = origin === "native_ai_breakdown" ? "breakdown" : "primary";
   const command = report.command || report.objective || "(unknown)";
@@ -592,6 +609,16 @@ function formatApplyLines(reportInfo) {
     });
   }
 
+  if (overviewFillResults.length) {
+    lines.push("", "Branch overview fills:");
+    lines.push(`- count: ${overviewFillResults.length}`);
+    overviewFillResults.slice(0, 10).forEach((item) => {
+      lines.push(
+        `- ${item.noteId} | source=${item.planSource || "unknown"} | disposition=${item.executionDisposition || "unknown"} | path=${item.apiPath || "unknown"}`
+      );
+    });
+  }
+
   const structureItems = results
     .filter((item) => item.type === "organize_branch_groups" && item.executionDetail)
     .slice(0, 10);
@@ -634,6 +661,9 @@ function applyArtifactEnvelope(info) {
   const helperBlockedActions = Array.isArray(report.helperBlockedActions)
     ? report.helperBlockedActions
     : [];
+  const overviewFillResults = results.filter(
+    (item) => item.type === "rewrite_excerpt" && item.planSource === "branch_structure_digest"
+  );
   return {
     ok: true,
     kind: "apply",
@@ -654,6 +684,7 @@ function applyArtifactEnvelope(info) {
       errorCount: results.filter((item) => item.error).length,
       helperBlockedCount: helperBlockedActions.length,
       changedNoteCount: report.branchDiff?.changedNoteCount || 0,
+      overviewFillCount: overviewFillResults.length,
     },
   };
 }
@@ -1935,6 +1966,7 @@ function collectReportInfo(kind) {
 function formatFollowupLines(reportInfo) {
   const plan = reportInfo.report || {};
   const summary = summarizePlanPlan(plan);
+  const branchOverviewActions = collectBranchOverviewActions(plan.actions);
   const lines = [
     `Latest follow-up report: ${reportInfo.file || "(derived)"}`,
     `Path: ${reportInfo.fullPath || "(derived from bridge artifacts)"}`,
@@ -1965,6 +1997,11 @@ function formatFollowupLines(reportInfo) {
       lines.push(
         `- primary strategy: ${replayPrimary.type || "unknown"} | disposition=${replayPrimary.executionDisposition || "unknown"} | deferred_semantic=${replayPrimary.deferredSemanticCount ?? 0} | deferred_visual=${replayPrimary.deferredVisualCount ?? 0}`
       );
+      if (replayPrimary.visibleActionCounts) {
+        lines.push(
+          `- branch overview fills: ${replayPrimary.visibleActionCounts.rewrite_excerpt || 0}`
+        );
+      }
       if (replayPrimary.summary) {
         lines.push(`- summary: ${replayPrimary.summary}`);
       }
@@ -1977,6 +2014,17 @@ function formatFollowupLines(reportInfo) {
         "- note: the stored follow-up artifact is older than the current planner replay, so this section shows the latest strategy semantics."
       );
     }
+  }
+
+  if (branchOverviewActions.length) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${branchOverviewActions.length}`);
+    branchOverviewActions.slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
   }
 
   if (Object.keys(summary.actionDispositionCounts || {}).length) {
@@ -2135,6 +2183,9 @@ async function handleReportCommand(kind, options) {
           replay ? `replay=${replay.actionCount}` : null,
           replay ? `replay_packs=${replay.strategyPackCount}` : null,
           replayPrimary ? `replay_primary=${replayPrimary.type || "unknown"}` : null,
+          replay
+            ? `replay_overview=${replayPrimary?.visibleActionCounts?.rewrite_excerpt || 0}`
+            : null,
         ]
           .filter(Boolean)
           .join(" ")
@@ -2162,7 +2213,7 @@ async function handleReportCommand(kind, options) {
     }
     if (options.compact) {
       outputText(
-        `apply=${envelope.summary.actionCount} applied=${envelope.summary.appliedCount} skipped=${envelope.summary.skippedCount} mode=${envelope.summary.mode} origin=${envelope.summary.origin || "none"}`
+        `apply=${envelope.summary.actionCount} applied=${envelope.summary.appliedCount} skipped=${envelope.summary.skippedCount} mode=${envelope.summary.mode} origin=${envelope.summary.origin || "none"} overview_fills=${envelope.summary.overviewFillCount || 0}`
       );
       return;
     }

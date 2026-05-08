@@ -84,6 +84,7 @@ The raw bridge passthrough now also exposes `/model/run`, `/model/replay`, and `
 When the local bridge supervisor has recorded lifecycle state, those same compact outputs also include `bridge_supervisor=...` and `bridge_supervisor_pid=...`, so the bridge ownership state stays visible without opening JSON.
 `mnaipro breakdown artifacts` now carries the same `nextCommand` recommendation, so the deep audit and the lighter health checks point to the same next action.
 `mnaipro followup apply latest` surfaces the latest second-stage execution artifact directly, so you can inspect the exact follow-up apply snapshot without hunting through the reports folder.
+`mnaipro followup latest` and `mnaipro followup apply latest` now also surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`, so the follow-up diagnostics read like an overview instead of a generic excerpt fill.
 `mnaipro status --json` now also carries `latestFollowupApply` when that second-stage execution artifact exists, so the quick health view can surface the same follow-up apply snapshot as `doctor`.
 `mnaipro status --compact` and `mnaipro doctor --compact` now also emit `followup_apply=1` plus `followup_apply_request=...` when that follow-up apply artifact exists, so the one-line health view keeps the second-stage execution snapshot visible too.
 `mnaipro doctor --json` now also carries `latestFollowupApply` when that second-stage execution artifact exists, so the higher-level health view can point at the same follow-up apply snapshot.

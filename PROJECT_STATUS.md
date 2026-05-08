@@ -24,6 +24,7 @@ Last updated: 2026-05-08
 - The `mnaipro overview` command now exposes a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
 - `mnaipro breakdown postprocess` now falls back to the latest apply report's `afterBranch` snapshot when no dedicated Breakdown artifacts exist, so the preview can still inspect a real branch snapshot.
 - `mnaipro breakdown postprocess --live-only` now disables that proxy path, so we can compare true Breakdown artifacts against the proxy baseline without changing the default operator flow.
+- `mnaipro followup latest` and `mnaipro followup apply latest` now surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`.
 - The standalone `marginnote-cli overview` command now exposes a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
 - The standalone `marginnote-cli capabilities` command now also exposes a shared `surfaceDocs` catalog, and its help footer reads from the same command-surface source of truth.
 - The standalone `mn-obsidian-bridge capabilities` command now exposes a shared `surfaceDocs` catalog, and the bridge help footer reads from the same command-surface source of truth.
@@ -47,6 +48,9 @@ Last updated: 2026-05-08
 - `npm run check:ci`
 - `npm run check`
 - `npm run addon:build`
+- `node --check scripts/inspect-latest-followup.js`
+- `node --check scripts/inspect-latest-followup-apply.js`
+- `node scripts/check-cli-smoke.js`
 - `node --check plugin/agent-core.js`
 - `node --check plugin/mock-api.js`
 - `node --check scripts/check-plugin-agent-core.js`

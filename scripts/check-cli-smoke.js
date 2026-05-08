@@ -1038,7 +1038,8 @@ async function main() {
       report,
       'mnaipro followup latest compact replay hint exposed',
       /replay_packs=\d+/.test(mnaiproFollowupCompactResult.stdout || '') &&
-        /replay_primary=/.test(mnaiproFollowupCompactResult.stdout || ''),
+        /replay_primary=/.test(mnaiproFollowupCompactResult.stdout || '') &&
+        /replay_overview=\d+/.test(mnaiproFollowupCompactResult.stdout || ''),
       { stdout: mnaiproFollowupCompactResult.stdout || '' }
     );
 
@@ -1064,6 +1065,12 @@ async function main() {
     ensure(report, 'mnaipro followup apply latest origin exposed', mnaiproFollowupApply.summary && mnaiproFollowupApply.summary.origin === 'native_ai_breakdown', {
       summary: mnaiproFollowupApply.summary || null
     });
+    ensure(
+      report,
+      'mnaipro followup apply latest overview fills exposed',
+      typeof mnaiproFollowupApply.summary.overviewFillCount === 'number',
+      { summary: mnaiproFollowupApply.summary || null }
+    );
     const mnaiproFollowupApplyCompactResult = runCommand(
       'mnaipro followup apply latest --compact',
       mnaiproCli,
@@ -1076,6 +1083,12 @@ async function main() {
     ensure(report, 'mnaipro followup apply latest compact hint exposed', /followup_apply=1/.test(mnaiproFollowupApplyCompactResult.stdout || '') && /mode=breakdown/.test(mnaiproFollowupApplyCompactResult.stdout || ''), {
       stdout: mnaiproFollowupApplyCompactResult.stdout || ''
     });
+    ensure(
+      report,
+      'mnaipro followup apply latest compact overview hint exposed',
+      /overview_fills=\d+/.test(mnaiproFollowupApplyCompactResult.stdout || ''),
+      { stdout: mnaiproFollowupApplyCompactResult.stdout || '' }
+    );
 
     const mnaiproBreakdownArtifactsResult = runCommand(
       'mnaipro breakdown artifacts',

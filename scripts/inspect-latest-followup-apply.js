@@ -83,6 +83,9 @@ function buildEnvelope(reportInfo) {
   const skippedCount = results.filter((item) => item.skipped).length;
   const errorItems = results.filter((item) => item.error);
   const changedNotes = report.branchDiff?.changedNotes || [];
+  const overviewFillResults = results.filter(
+    (item) => item.type === "rewrite_excerpt" && item.planSource === "branch_structure_digest"
+  );
   const origin = report.origin || "";
   const mode = origin === "native_ai_breakdown" ? "breakdown" : "primary";
   const command = report.command || report.objective || "(unknown)";
@@ -113,11 +116,13 @@ function buildEnvelope(reportInfo) {
       skippedCount,
       errorCount: errorItems.length,
       changedNoteCount: report.branchDiff?.changedNoteCount || 0,
+      overviewFillCount: overviewFillResults.length,
     },
     sourceCounts,
     errors: errorItems,
     helperBlockedActions,
     changedNotes,
+    overviewFillResults,
   };
 }
 
@@ -137,6 +142,7 @@ function summarize(reportInfo) {
   const changedNotes = envelope.changedNotes || [];
   const errors = envelope.errors || [];
   const helperBlockedActions = envelope.helperBlockedActions || [];
+  const overviewFillResults = envelope.overviewFillResults || [];
 
   const lines = [
     `Latest follow-up apply report: ${reportInfo.file}`,
@@ -186,6 +192,16 @@ function summarize(reportInfo) {
     });
   }
 
+  if (overviewFillResults.length) {
+    lines.push("", "Branch overview fills:");
+    lines.push(`- count: ${overviewFillResults.length}`);
+    overviewFillResults.slice(0, 10).forEach((item) => {
+      lines.push(
+        `- ${item.noteId} | source=${item.planSource || "unknown"} | disposition=${item.executionDisposition || "unknown"} | path=${item.apiPath || "unknown"}`
+      );
+    });
+  }
+
   return lines.join("\n");
 }
 
@@ -208,6 +224,7 @@ function formatCompact(envelope) {
     `mode=${summary.mode || "primary"}`,
     `origin=${summary.origin || "none"}`,
     `changed_notes=${summary.changedNoteCount || 0}`,
+    `overview_fills=${summary.overviewFillCount || 0}`,
   ].join(" ");
 }
 
