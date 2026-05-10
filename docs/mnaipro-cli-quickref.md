@@ -22,6 +22,27 @@ mnaipro breakdown postprocess
 mnaipro breakdown artifacts
 ```
 
+## Raw bridge access
+
+```bash
+mnaipro request get /status
+mnaipro request get /model/latest
+mnaipro request post /model/run --body '{"dryRun":true,"prompt":"preview this branch"}'
+mnaipro request post /model/replay --body '{"traceId":"<trace-id>","dryRun":true}'
+```
+
+`mnaipro request post /model/run` is the preview-safe entrypoint into the provider-agnostic model backend. It defaults to dry-run behavior unless you intentionally opt into a real provider call through the bridge configuration.
+
+## Experimental gate
+
+```bash
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental status --json
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental diagnostics --json
+MNAIPRO_EXPERIMENTAL=1 MNAIPRO_EXPERIMENTAL_COMMANDS='ui-probe,private-selector' mnaipro experimental registry --json
+```
+
+Those commands stay hidden until the gate is enabled. They report the experimental mode, configured private command names, the latest diagnostic evidence, and the gated command registry for the current session without changing the stable command surface.
+
 ## Bridge commands
 
 ```bash
@@ -65,6 +86,7 @@ mnaipro plan latest --json
 Those status/doctor surfaces now also attach the local Breakdown artifact audit by default, so normal health checks already show whether the newest Breakdown chain is `complete`, `partial`, or `missing`.
 `mnaipro breakdown smoke` still self-hosts by default, but it now also honors a local `--base-url` after the subcommand, an explicit top-level `--base-url`, or the dedicated `--bridge-base-url` flag when you want to reuse an already running bridge.
 `mnaipro bridge status` and the local `/status` bridge payload now expose the same settings evidence, the same `breakdownArtifacts` block, and the same `breakdownNextCommand` hint too, so the CLI wrapper and the HTTP bridge stay in lockstep.
+The raw bridge passthrough now also exposes `/model/run`, `/model/replay`, and `/model/latest`, so you can inspect and replay the provider-agnostic model backend directly when you need to debug the execution surface.
 `mnaipro breakdown postprocess` now prefers the latest `origin = native_ai_breakdown` apply report, then falls back to the latest Breakdown request, then the latest Breakdown plan report; when a plan report is selected, the wrapper also replays through the paired request snapshot so the preview still shows the real branch nodes and strategy pack. If no Breakdown artifacts exist yet, `--json` now returns a structured `no_breakdown_artifacts` diagnostic with the newest ordinary request/plan/apply evidence so you can tell whether the machine is still only producing primary branch runs.
 `mnaipro breakdown postprocess` now also exposes `nextCommand = mnaipro breakdown artifacts --json`, and compact output mirrors that same hint as `next=...`, so the preview and the cache-audit companion stay aligned.
 `mnaipro breakdown artifacts` is the cache-audit companion to that preview: it reads the local request/report cache directly, classifies the newest Breakdown chain as `complete`, `partial`, or `missing`, checks whether request/plan/apply/followup still share one request id, and shows the latest generic artifacts when no Breakdown-specific chain exists.
@@ -72,10 +94,12 @@ Those status/doctor surfaces now also attach the local Breakdown artifact audit 
 When the local bridge supervisor has recorded lifecycle state, those same compact outputs also include `bridge_supervisor=...` and `bridge_supervisor_pid=...`, so the bridge ownership state stays visible without opening JSON.
 `mnaipro breakdown artifacts` now carries the same `nextCommand` recommendation, so the deep audit and the lighter health checks point to the same next action.
 `mnaipro followup apply latest` surfaces the latest second-stage execution artifact directly, so you can inspect the exact follow-up apply snapshot without hunting through the reports folder.
+`mnaipro followup latest` and `mnaipro followup apply latest` now also surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`, so the follow-up diagnostics read like an overview instead of a generic excerpt fill.
 `mnaipro status --json` now also carries `latestFollowupApply` when that second-stage execution artifact exists, so the quick health view can surface the same follow-up apply snapshot as `doctor`.
 `mnaipro status --compact` and `mnaipro doctor --compact` now also emit `followup_apply=1` plus `followup_apply_request=...` when that follow-up apply artifact exists, so the one-line health view keeps the second-stage execution snapshot visible too.
 `mnaipro doctor --json` now also carries `latestFollowupApply` when that second-stage execution artifact exists, so the higher-level health view can point at the same follow-up apply snapshot.
 `mnaipro followup latest` now also shows the current replay summary beside the stored follow-up artifact, which makes old follow-up snapshots easier to compare against today’s planner output.
+`mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay stay aligned with live follow-up vocabulary.
 
 If you are checking live addon wiring instead of replay output, run:
 

@@ -26,7 +26,10 @@ This repository uses a branch-and-PR workflow.
 - Use `status:*` for the current state of the work.
 
 ## Releases
-- Build the addon archive with `npm run addon:build`.
+- The `release-addon` workflow runs `npm run check:ci` before building the addon archive; the smoke step is portable on GitHub Actions, so release gating does not depend on sibling CLI checkouts being present.
+- Build the addon archive with `npm run addon:build` when you need a local package.
+- Update `CHANGELOG.md` before a tagged release if you want the release notes to reflect the current user-facing slice.
+- See `docs/release-process.md` for the end-to-end release checklist and publish paths.
 - Tag a release commit with a `v*` tag to publish the generated `.mnaddon` as a GitHub Release asset.
 - Use the `release-addon` workflow manually when you want a fresh packaged archive without publishing a tag.
 

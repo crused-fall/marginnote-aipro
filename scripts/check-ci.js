@@ -12,6 +12,10 @@ const syntaxChecks = [
   "bridge/native-ai-template-governance.js",
   "bridge/native-ai-breakdown-postprocess.js",
   "bridge/breakdown-artifact-audit.js",
+  "bridge/model-backend.js",
+  "bridge/experimental/gate.js",
+  "bridge/experimental/diagnostics.js",
+  "bridge/experimental/registry.js",
   "plugin/agent-core.js",
   "plugin/index.js",
   "plugin/mock-api.js",
@@ -36,6 +40,7 @@ const syntaxChecks = [
   "scripts/check-bridge-status-breakdown-surface.js",
   "scripts/check-cli-breakdown-audit-surface.js",
   "scripts/check-main-breakdown-origin.js",
+  "scripts/check-plugin-agent-core.js",
   "scripts/bridge-status.js",
   "scripts/bridge-doctor.js",
   "scripts/reload-launch-agent.js",
@@ -49,9 +54,16 @@ const scriptChecks = [
   ["native-ai breakdown postprocess", "scripts/check-native-ai-breakdown-postprocess.js"],
   ["native-ai breakdown artifacts", "scripts/check-native-ai-breakdown-artifacts.js"],
   ["native-ai breakdown smoke", "scripts/check-native-ai-breakdown-smoke.js"],
+  ["bridge model backend", "scripts/check-bridge-model-backend.js"],
+  ["experimental gate", "scripts/check-experimental-gate.js"],
+  ["ci orchestrator", "scripts/check-ci-orchestrator.js"],
+  ["portable cli smoke", "scripts/check-cli-smoke-portable.js"],
+  ["cli smoke", "scripts/check-cli-smoke.js"],
+  ["release addon workflow", "scripts/check-release-addon-workflow.js"],
   ["bridge status breakdown surface", "scripts/check-bridge-status-breakdown-surface.js"],
   ["cli breakdown audit surface", "scripts/check-cli-breakdown-audit-surface.js"],
   ["main breakdown origin", "scripts/check-main-breakdown-origin.js"],
+  ["plugin agent core", "scripts/check-plugin-agent-core.js"],
 ];
 
 if (process.platform === "darwin") {
@@ -106,7 +118,11 @@ function main() {
 
   for (const [label, relativePath] of scriptChecks) {
     count += 1;
-    run(label, process.execPath, [path.join(ROOT_DIR, relativePath)]);
+    const args = [path.join(ROOT_DIR, relativePath)];
+    if (relativePath === "scripts/check-cli-smoke.js") {
+      args.push("--portable");
+    }
+    run(label, process.execPath, args);
   }
 
   console.log(`CI checks passed (${count} checks)`);

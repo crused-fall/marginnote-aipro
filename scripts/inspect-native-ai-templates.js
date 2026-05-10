@@ -29,6 +29,7 @@ function buildTemplateReport() {
     warnings: governance.qualityFindings,
     normalizationSuggestions: governance.normalizationSuggestions,
     templateDiffs: governance.templateDiffs,
+    patchExport: governance.patchExport,
     recommendations: governance.recommendations
   };
 }
@@ -86,6 +87,26 @@ function renderText(report) {
     });
   }
 
+  const patchExport = report.patchExport || { summary: { proposalCount: 0 }, proposals: [] };
+  lines.push("", "Patch export:");
+  lines.push(
+    `- Format: ${patchExport.format || "template-patch-proposal-v1"} | safeOnly=${patchExport.safeOnly ? "yes" : "no"} | proposals=${patchExport.summary && typeof patchExport.summary.proposalCount === "number" ? patchExport.summary.proposalCount : 0}`
+  );
+  if (patchExport.summary && Array.isArray(patchExport.summary.affectedTemplateIndexes) && patchExport.summary.affectedTemplateIndexes.length) {
+    lines.push(
+      `- Affected templates: ${patchExport.summary.affectedTemplateIndexes.join(", ")}`
+    );
+  }
+  if (Array.isArray(patchExport.proposals) && patchExport.proposals.length) {
+    patchExport.proposals.forEach((proposal) => {
+      lines.push(
+        `- ${proposal.path}: "${proposal.before}" -> "${proposal.after}" [${proposal.reason}]`
+      );
+    });
+  } else {
+    lines.push("- No patch proposals generated.");
+  }
+
   report.templates.forEach((template) => {
     lines.push("");
     lines.push(`Template ${template.index}`);
@@ -99,6 +120,9 @@ function renderText(report) {
     });
   });
 
+  lines.push("");
+  lines.push("- Preview-only: this command does not write back to MarginNote.");
+
   return lines.join("\n");
 }
 
@@ -110,4 +134,11 @@ function main() {
   );
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildTemplateReport,
+  renderText
+};

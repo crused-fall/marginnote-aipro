@@ -3,7 +3,7 @@
 Canonical long-term memory now lives in `PROJECT_MEMORY.md`.
 Current phase tracking lives in `PROJECT_STATUS.md`.
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Project Goal
 
@@ -57,6 +57,8 @@ Implemented:
 - local report inspection script at `scripts/inspect-latest-apply.js`
 - offline request replay script at `scripts/replay-requests.js`
 - local command-line wrapper at `cli/mnaipro.js` with a `mnaipro` bin entry for bridge status, doctor checks, latest-report inspection, replay, Breakdown smoke, and raw request passthrough
+- provider-agnostic model backend at `bridge/model-backend.js` with `/model/run`, `/model/replay`, and `/model/latest`, dry-run default behavior, replay hooks, and persisted request/response/trace artifacts
+- `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` now surface model-backend readiness and latest execution evidence alongside the existing Breakdown and bridge health signals
 - standalone `marginnote-cli` CLI at `/Users/cfall/Documents/Programs/marginnote-cli` for MarginNote native capability inspection, local evidence reading, and supported native AI preference writes
 - standalone `mn-obsidian-bridge` CLI at `/Users/cfall/Documents/Programs/MN-Obsidian-bridge` for MarginNote ↔ Obsidian bridge diagnostics, archive evidence reading, and supported Obsidian sync-setting writes
 - local `marginnote` Codex skill at `/Users/cfall/.codex/skills/marginnote` for routing MarginNote tasks to the right CLI surface instead of inventing a new runtime
@@ -398,6 +400,7 @@ We are not trying to build:
 - Landed a first deterministic native-AI supervision layer at `bridge/native-ai-supervision.js` plus `npm run native-ai:matrix`: it converts local inspection evidence into capability rows such as `augment_only`, `mirror_and_supervise`, `supervise_outputs`, and `avoid_direct_hook`, so future native-AI integration work starts from explicit policy instead of hand-wavy direction.
 - Documented that supervision matrix in `docs/native-ai-supervision-matrix.md`, with current v1 decisions such as: do not rebuild native chat/study surfaces, mirror OCR/template governance, supervise AI Breakdown outputs, prefer our own executor over native private hierarchy tools, and defer any hard runtime coupling to credits/MAX state.
 - Took the first concrete step under that supervision matrix by adding `npm run native-ai:templates`: it mirrors local AI OCR/card-template configs, classifies them coarsely (translation / summary / mermaid / review / custom), and runs a conservative structural lint pass so template governance work can start without touching private OCR execution paths.
+- That same template command now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization; it stays preview-only and read-only, while semantic template findings remain warnings/recommendations rather than patches.
 - Expanded that template-governance path into a deterministic rule module at `bridge/native-ai-template-governance.js`: template reports now include explainable normalization suggestions, same-kind diffs, generic-prompt quality findings, and recommendation lines, with a dedicated regression check at `npm run native-ai:template-check`.
 - Added the first offline AI Breakdown result post-processing entry at `bridge/native-ai-breakdown-postprocess.js` plus `npm run native-ai:breakdown-postprocess`: it tags planner payloads with `origin = native_ai_breakdown`, emits a `native_ai_breakdown_context` note, derives simple breakdown-fit signals, and reuses the existing organizer pipeline on a saved branch snapshot without claiming live private-runtime integration.
 - Added a dedicated regression check for that path at `npm run native-ai:breakdown-check`, and verified the sample breakdown-like branch produces visible `branch_structure_digest` actions while the current latest saved real branch snapshot can also be replayed through the same origin-aware entry.
@@ -408,7 +411,7 @@ We are not trying to build:
 - Added that self-hosted Breakdown smoke to the root `npm run check` gate, so the live preview/apply self-test now runs alongside the static planner and artifact regressions.
 - Added shortcut aliases for the smoke test: `npm run native-ai:breakdown-smoke:visible` and `npm run native-ai:breakdown-smoke:organized-enough`, so the two most useful cases can be run without remembering CLI flags.
 - Added `mnaipro breakdown postprocess` as a thin read-only wrapper around the Breakdown postprocess preview, taught that preview to surface the primary strategy pack directly so zero-action organized-enough results still read like explicit agent conclusions instead of silent empty runs, and then upgraded its artifact selection to prefer `origin = native_ai_breakdown` apply reports first, then Breakdown requests, then Breakdown plan reports; when a plan report wins, the replay now explicitly uses the paired request snapshot as the node source and surfaces both paths in the diagnostic output.
-- Tightened that Breakdown postprocess diagnostic path again for the current real-world local state where no Breakdown artifacts exist yet: `mnaipro breakdown postprocess --json` now emits a structured `no_breakdown_artifacts` report instead of plain text, and includes the newest ordinary request/plan/apply summaries so we can prove from cache evidence that the machine is still only producing primary-mode runs.
+- Tightened that Breakdown postprocess diagnostic path again for the current real-world local state where no Breakdown artifacts exist yet: `mnaipro breakdown postprocess --json` now falls back to the latest apply report's `afterBranch` snapshot when one is available, and only emits a structured `no_breakdown_artifacts` report when even that proxy input is missing.
 - Fixed the live addon apply envelope for Breakdown mode: `main.js` now preserves `command`, `objective`, and `origin` on the normal `applySupportedActions()` path instead of only on blocked/no-op executions, and added `npm run native-ai:breakdown-origin-check` as a dedicated source-level regression for both execution envelopes.
 - Added a dedicated Breakdown cache-audit surface at `scripts/inspect-native-ai-breakdown-artifacts.js`, `npm run native-ai:breakdown-artifacts`, and `mnaipro breakdown artifacts`: it classifies the newest Breakdown artifact chain as `complete`, `partial`, or `missing`, verifies whether request/plan/apply/followup still agree on one request id, and shows the latest generic artifacts when the cache still only contains ordinary primary-mode runs.
 - Promoted that Breakdown cache audit into the default CLI diagnostics: `mnaipro status`, `mnaipro bridge status`, `mnaipro doctor`, and `scripts/bridge-status.js` now all attach the same local `breakdownArtifacts` summary, and `npm run cli:breakdown-audit-surface-check` plus the larger CLI smoke suite both pin that behavior with deterministic temp-artifact fixtures.
@@ -421,7 +424,7 @@ We are not trying to build:
 
 ## Next Recommended Milestones
 
-1. Capture a real live Breakdown branch snapshot through the new `mnaipro breakdown postprocess` wrapper and use it to tune the grouped branch-overview heuristics.
+1. Capture a dedicated live Breakdown branch snapshot through the proxy-aware `mnaipro breakdown postprocess` wrapper and use it to tune the grouped branch-overview heuristics if the live sample differs from the proxy baseline.
 2. Decide whether template governance should next produce auto-normalized template patches or stay recommendation-only for safety.
 3. Continue expanding `marginnote-cli` toward broader MarginNote-native read/write coverage, while keeping `mnaipro` focused on the plugin / agent workflow and `mn-obsidian-bridge` as the separate bridge diagnostics/write CLI.
 4. Decide when to introduce a real model provider into the bridge, and how much deterministic planning should remain in front of it for auditability and replay.

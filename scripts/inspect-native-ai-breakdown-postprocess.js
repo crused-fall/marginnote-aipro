@@ -12,6 +12,7 @@ function parseArgs(argv) {
     inputPath: "",
     json: false,
     compact: false,
+    liveOnly: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -35,6 +36,10 @@ function parseArgs(argv) {
     }
     if (arg === "--help" || arg === "-h") {
       options.help = true;
+      continue;
+    }
+    if (arg === "--live-only" || arg === "--no-proxy") {
+      options.liveOnly = true;
       continue;
     }
   }
@@ -101,6 +106,24 @@ function latestJsonFile(dirPath, filter) {
     fullPath: latest.fullPath,
     report: readJsonFile(latest.fullPath)
   };
+}
+
+function readLatestApplyReport() {
+  return latestJsonFile(
+    REPORTS_DIR,
+    (file) => /-apply-.*\.json$/.test(file) && !/-followup-apply-.*\.json$/.test(file)
+  );
+}
+
+function normalizeAfterBranchNotes(report) {
+  const notes =
+    report &&
+    report.afterBranch &&
+    Array.isArray(report.afterBranch.notes)
+      ? report.afterBranch.notes
+      : [];
+
+  return normalizeBranchNodes(notes);
 }
 
 function latestMatchingJsonFile(dirPath, filter, predicate) {
@@ -332,6 +355,30 @@ function readLatestBreakdownSource() {
   );
 }
 
+function readLatestApplyProxySource() {
+  const latestApply = readLatestApplyReport();
+  if (!latestApply) return null;
+
+  const nodes = normalizeAfterBranchNotes(latestApply.report);
+  if (!nodes.length) return null;
+
+  return {
+    label: "latest_apply_after_branch_proxy",
+    file: latestApply.file,
+    path: latestApply.fullPath,
+    fullPath: latestApply.fullPath,
+    nodePath: latestApply.fullPath,
+    report: latestApply.report,
+    nodes,
+    proxyApply: summarizeApplyArtifact(latestApply),
+  };
+}
+
+function readLatestPostprocessSource(options = {}) {
+  const liveOnly = !!options.liveOnly;
+  return liveOnly ? readLatestBreakdownSource() : readLatestBreakdownSource() || readLatestApplyProxySource();
+}
+
 function extractNodesFromInput(filePath) {
   const raw = readJsonFile(filePath);
   if (Array.isArray(raw)) return normalizeBranchNodes(raw);
@@ -419,6 +466,8 @@ function buildReport(result, sourceInfo) {
     notes: result.plan.notes || [],
     actions: result.plan.actions || [],
     unsupported: result.plan.unsupportedActions || [],
+    sourceProxy: sourceInfo.proxyApply || null,
+    sourceSelectionMode: sourceInfo.proxyApply ? "proxy_after_branch" : "live_breakdown",
   };
 }
 
@@ -432,6 +481,7 @@ function summarize(result, sourceInfo) {
   const lines = [
     "Native AI Breakdown Postprocess Preview",
     `Source: ${sourceInfo.label}`,
+    `Selection mode: ${sourceInfo.proxyApply ? "proxy_after_branch" : "live_breakdown"}`,
     `Path: ${sourceInfo.path || "(n/a)"}`,
     `Objective: ${result.payload.objective}`,
     `Origin: ${result.payload.origin}`,
@@ -448,6 +498,12 @@ function summarize(result, sourceInfo) {
 
   if (sourceInfo.nodePath && sourceInfo.nodePath !== sourceInfo.path) {
     lines.push(`Snapshot path: ${sourceInfo.nodePath}`);
+  }
+
+  if (sourceInfo.proxyApply) {
+    lines.push(
+      `Proxy apply: ${sourceInfo.proxyApply.file} | mode=${sourceInfo.proxyApply.mode} | origin=${sourceInfo.proxyApply.origin || "(none)"}`
+    );
   }
 
   if (primaryPack) {
@@ -509,11 +565,13 @@ function main() {
       [
         "Native AI Breakdown Postprocess Preview",
         "Usage: inspect-native-ai-breakdown-postprocess [options]",
+        "When no Breakdown-specific cache exists, the latest apply report's afterBranch snapshot is used as a proxy input if available.",
         "",
         "Options:",
         "  --input <path>   inspect a specific branch snapshot, request, or report",
         "  --json           emit a JSON report",
         "  --compact        emit a one-line summary",
+        "  --live-only      skip the apply-report proxy fallback and require dedicated Breakdown artifacts",
         "  -h, --help       show this help",
       ].join("\n") + "\n"
     );
@@ -569,6 +627,7 @@ function main() {
         [
           "Native AI Breakdown Postprocess",
           `source=input_file`,
+          "selection=live_breakdown",
           `actions=${report.summary.actionCount}`,
           `strategies=${report.summary.strategyPackCount}`,
           `primary=${primaryPack ? primaryPack.type || "unknown" : "none"}`,
@@ -586,7 +645,7 @@ function main() {
     return;
   }
 
-  const latestSource = readLatestBreakdownSource();
+  const latestSource = readLatestPostprocessSource({ liveOnly: options.liveOnly });
   if (!latestSource) {
     const report = buildNoArtifactReport();
     if (options.json) {
@@ -602,6 +661,7 @@ function main() {
         [
           "Native AI Breakdown Postprocess",
           "source=none",
+          `selection=${options.liveOnly ? "live_breakdown" : "proxy_after_branch"}`,
           "error=no_breakdown_artifacts",
           request,
           plan,
@@ -618,9 +678,9 @@ function main() {
   if (!nodes.length) {
     const report = buildNoNodesReport(
       "no_branch_nodes",
-      `Latest Breakdown source has no branch nodes: ${latestSource.file}`,
+      `Latest postprocess source has no branch nodes: ${latestSource.file}`,
       {
-        label: sourceLabel(latestSource),
+        label: latestSource.label || sourceLabel(latestSource),
         path: latestSource.fullPath,
         nodePath: sourceNodePath(latestSource),
       }
@@ -663,6 +723,7 @@ function main() {
       [
         "Native AI Breakdown Postprocess",
         `source=${report.source}`,
+        `selection=${report.sourceProxy ? "proxy_after_branch" : "live_breakdown"}`,
         `actions=${report.summary.actionCount}`,
         `strategies=${report.summary.strategyPackCount}`,
         `primary=${primaryPack ? primaryPack.type || "unknown" : "none"}`,

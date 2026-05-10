@@ -16,14 +16,20 @@ It is split into two parts:
   A local mock MarginNote runtime so we can test the loop without launching the app.
 - `bridge/server.js`
   A local planning service. In production this should call a real LLM. In this starter it returns deterministic action plans so the whole loop is easy to test.
+- `bridge/model-backend.js`
+  A provider-agnostic model execution backend that persists request, response, and trace artifacts, exposes `/model/run`, `/model/replay`, and `/model/latest`, and keeps preview/dry-run the default.
 - `bridge/planner.js`
   Shared planning core used by both the live bridge server and offline replay scripts, so regression checks exercise the same planner logic as production.
 - standalone CLI split
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
-  - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
-  - `mn-obsidian-bridge` is the standalone read-write CLI for MarginNote ↔ Obsidian bridge diagnostics, including a stable `capabilities` registry command, a top-level `overview` evidence map, higher-level doctor/report evidence for Obsidian sync settings, plus patch-compatible or restorable settings snapshots and supported `ob settings export|restore|set|patch|reset` flows.
+  - `mnaipro request get|post` exposes raw bridge passthrough, including the model backend endpoints when you need direct inspection or replay.
+  - `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` are opt-in surfaces that stay hidden until `MNAIPRO_EXPERIMENTAL=1` is set; they report the experimental gate state, latest diagnostic evidence, and gated command registry without changing stable behavior.
+  - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
+  - `marginnote-cli overview` gives a top-level MarginNote-native evidence map across app inspection, doctor, AI overview, and capabilities.
+  - `marginnote-cli capabilities` and `marginnote-cli --help` now share the same `surfaceDocs` catalog.
+  - `mn-obsidian-bridge` is the standalone read-write CLI for MarginNote ↔ Obsidian bridge diagnostics, including a stable `capabilities` registry command, a top-level `overview` evidence map, a shared `surfaceDocs` command-surface catalog, higher-level doctor/report evidence for Obsidian sync settings, plus patch-compatible or restorable settings snapshots and supported `ob settings export|restore|set|patch|reset` flows.
   - `marginnote-cli ai status` gives a compact native-AI health summary.
   - `marginnote-cli ai status --compact` also gives a short `next=` hint for the supported snapshot / restore workflow.
   - `marginnote-cli ai overview` gives a top-level native-AI capability map across prompts, study, memory, traces, OCR, and Breakdown.
@@ -183,6 +189,7 @@ When a structural apply does run, the apply artifact now also records which crea
 After a successful live apply, the addon now also requests one immediate follow-up plan from the post-apply branch snapshot and saves it as a separate follow-up artifact, so we can inspect the likely second-stage enrich actions without asking for another manual run first.
 When that follow-up plan is only the visible `branch_structure_digest` excerpt-fill action, the addon now immediately applies that second stage as well and writes a separate follow-up apply artifact.
 If a follow-up pass would now only add invisible semantic tags to those freshly summarized branch nodes, the planner suppresses that output entirely so stage two stays quiet instead of generating low-value churn.
+`mnaipro followup latest` and `mnaipro followup apply latest` now also surface explicit branch-overview action/fill counts when that second stage comes from `branch_structure_digest`, so the second-stage output reads like a branch overview instead of a generic excerpt fill.
 
 Inspect the latest follow-up artifact directly, or derive the same follow-up plan from the newest apply artifact when no stored follow-up file exists yet:
 
@@ -211,7 +218,8 @@ mnaipro capabilities
 mnaipro capabilities --json
 ```
 
-That registry mirrors the live commander tree, so it stays aligned with the actual `mnaipro` subcommands instead of relying on hand-maintained docs.
+That registry mirrors the live commander tree and now also exposes the curated `surfaceDocs` catalog shared with `mnaipro --help`, so the actual `mnaipro` subcommands and the top-level help footer stay aligned instead of relying on hand-maintained docs.
+The same surface now includes a first-class `mnaipro overview` entry, which gives a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
 
 Inspect the locally installed MarginNote 4 app for repeatable evidence of native AI prompt modules, tool contracts, UI signals, preferences, and container traces:
 
@@ -235,6 +243,10 @@ Mirror the local AI OCR / card templates and run a first structural lint pass:
 npm run native-ai:templates
 ```
 
+This report now also emits a deterministic `patchExport` proposal surface for whitespace-only prompt normalization.
+The patch export is preview-only and does not write back to MarginNote.
+Semantic template issues still remain warnings and recommendations, not patch proposals.
+
 Preview how the current organizer would post-process a branch treated as native AI Breakdown output:
 
 ```bash
@@ -253,11 +265,12 @@ The same preview is also available through the thin CLI wrapper:
 ```bash
 mnaipro breakdown postprocess
 mnaipro breakdown postprocess --json
+mnaipro breakdown postprocess --live-only --json
 mnaipro breakdown artifacts
 mnaipro breakdown artifacts --json
 ```
 
-That wrapper now prefers the latest `origin = native_ai_breakdown` apply report, then falls back to the latest Breakdown request, then the latest Breakdown plan report. If the selected source is a plan report, it also reuses the paired request snapshot for node replay, while still showing the plan artifact as the primary source. If no Breakdown artifacts exist at all, the wrapper now returns a structured `no_breakdown_artifacts` report in JSON mode and includes the newest ordinary request/plan/apply evidence, which makes it easier to see that the local cache is still only capturing primary-mode runs.
+That wrapper now prefers the latest `origin = native_ai_breakdown` apply report, then falls back to the latest Breakdown request, then the latest Breakdown plan report. If the selected source is a plan report, it also reuses the paired request snapshot for node replay, while still showing the plan artifact as the primary source. If no Breakdown artifacts exist, the wrapper now falls back to the latest apply report's `afterBranch` snapshot when one is available; only when that proxy input is also missing does it return a structured `no_breakdown_artifacts` report in JSON mode and include the newest ordinary request/plan/apply evidence. If you want to require dedicated Breakdown artifacts and skip the proxy fallback, use `--live-only`.
 `mnaipro breakdown postprocess` now also carries a `nextCommand` hint that points to `mnaipro breakdown artifacts --json`, so the preview surface explicitly points at the companion cache-audit command in both JSON and compact modes.
 
 If you need to audit the cache itself rather than replay a branch, run:
@@ -306,8 +319,11 @@ npm run cli:smoke
 ```
 
 Use `npm run cli:smoke:json` for structured output or `npm run cli:smoke:compact` for a one-line status.
+Use `npm run cli:smoke:portable` if you want to force the CI-safe portable mode locally.
+Run `node scripts/check-cli-smoke.js --help` to see the portable fallback and root override flags.
 
 The smoke now also checks each standalone CLI's `capabilities` registry command so command-surface drift gets caught early.
+In CI, or when the sibling `marginnote-cli` / `MN-Obsidian-Bridge` checkouts are not present, the same smoke command auto-falls back to portable mode and keeps the repo-local bridge / `mnaipro` coverage running without depending on those extra repos.
 
 If you want to verify each standalone CLI on its own, run these repo-local smoke entrypoints directly:
 
@@ -323,6 +339,7 @@ Install the local command-line wrapper and inspect its command surface:
 ```bash
 npm link
 mnaipro --help
+mnaipro overview --json
 mnaipro status --obsidian-vault-path /path/to/vault
 mnaipro doctor
 mnaipro bridge doctor
@@ -346,6 +363,7 @@ The CLI currently exposes:
 - `mnaipro bridge render`
 - `mnaipro bridge reload`
 - `mnaipro bridge logs`
+- `mnaipro overview`
 - `mnaipro status`
 - `mnaipro doctor`
 - `mnaipro plan latest`
@@ -364,6 +382,8 @@ The CLI currently exposes:
 They now also surface the local Breakdown artifact audit by default, including the top-level `complete` / `partial` / `missing` state.
 `mnaipro followup latest` now also shows the current replay summary beside the stored follow-up artifact, so older follow-up records can still be compared against the latest planner semantics.
 The local bridge now mirrors that replay summary in `GET /status` and `GET /reports/latest?kind=followup`, so the live diagnostics surface stays aligned with the CLI.
+`mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay keep the same vocabulary as live follow-up output.
+`mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` stay hidden by default. Set `MNAIPRO_EXPERIMENTAL=1` to expose the opt-in experimental gate, and use `MNAIPRO_EXPERIMENTAL_COMMANDS` to list configured private command names for that session.
 
 See `docs/bridge-ops-quickstart.md` for the bridge deployment flow and the fastest recovery path.
 
@@ -422,8 +442,10 @@ npm run addon:build
 ```
 
 The generated `.mnaddon` archive is a local build artifact and is ignored by git.
-When you push a `v*` tag, the GitHub release workflow uploads the same archive as a workflow artifact and attaches it to the GitHub Release asset.
+When you push a `v*` tag, the GitHub release workflow first runs `npm run check:ci`, then builds the same archive, uploads it as a workflow artifact, and attaches it to the GitHub Release asset.
 You can also trigger that workflow manually from the Actions tab to produce a fresh package without publishing a tag.
+Release notes now live in `CHANGELOG.md`; update that file when you want the next tag to summarize user-visible changes.
+See `docs/release-process.md` for the exact release path and validation steps.
 
 ## Local bridge diagnostics API
 
@@ -441,6 +463,12 @@ When the local bridge is running, these endpoints are available:
   returns the newest stored follow-up artifact, or derives the same follow-up plan from the latest apply artifact when no follow-up file exists yet
 - `GET /reports/latest?kind=followup_apply`
 - `GET /reports/latest?kind=diagnostic`
+- `POST /model/run`
+  runs the provider-agnostic model backend; preview-only requests keep `dryRun: true` unless you intentionally opt into a real provider call
+- `POST /model/replay`
+  replays a stored model trace or request through the same backend interface
+- `GET /model/latest`
+  returns the newest stored model execution trace and summary
 
 This is intended to let us debug future runs from logs and APIs first, instead of relying on repeated manual “what did you see?” testing loops.
 The same principle now applies to native MarginNote AI research too: the repo includes a repeatable local inspection command instead of relying only on one-off manual bundle spelunking.

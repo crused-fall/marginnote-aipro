@@ -73,6 +73,18 @@ function normalizeAfterBranchNotes(report) {
   }));
 }
 
+function isBranchOverviewAction(action) {
+  return (
+    !!action &&
+    action.type === "rewrite_excerpt" &&
+    action.meta?.source === "branch_structure_digest"
+  );
+}
+
+function collectBranchOverviewActions(actions) {
+  return (Array.isArray(actions) ? actions : []).filter(isBranchOverviewAction);
+}
+
 function summarize(planInfo) {
   const plan = planInfo.report || {};
   const actions = Array.isArray(plan.actions) ? plan.actions : [];
@@ -85,6 +97,7 @@ function summarize(planInfo) {
   const phaseCounts = plan.actionPhaseCounts || {};
   const origin = plan.origin || "";
   const mode = origin === "native_ai_breakdown" ? "breakdown" : "primary";
+  const branchOverviewActions = collectBranchOverviewActions(actions);
 
   const lines = [
     `Latest follow-up report: ${planInfo.file}`,
@@ -136,10 +149,20 @@ function summarize(planInfo) {
           : "";
       const overviewExtra =
         action.type === "rewrite_excerpt" && action.meta?.source === "branch_structure_digest"
-          ? ` | overview=${String(action.text || "").replace(/\\s+/g, " ").trim().slice(0, 80)}`
+          ? ` | overview=${String(action.text || "").replace(/\s+/g, " ").trim().slice(0, 80)}`
           : "";
       lines.push(
         `- ${action.type} -> ${action.noteId} | phase=${action.phase || "unknown"} | disposition=${action.execution?.disposition || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${colorExtra}${overviewExtra}`
+      );
+    });
+  }
+
+  if (branchOverviewActions.length) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${branchOverviewActions.length}`);
+    branchOverviewActions.slice(0, 10).forEach((action) => {
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}`
       );
     });
   }
@@ -181,6 +204,11 @@ function summarizeCurrentReplay(replayPlan, applyInfo) {
     }
     if (primaryPack.reason) {
       lines.push(`- Reason: ${primaryPack.reason}`);
+    }
+    if (primaryPack.visibleActionCounts) {
+      lines.push(
+        `- branch overview fills: ${primaryPack.visibleActionCounts.rewrite_excerpt || 0}`
+      );
     }
   }
 

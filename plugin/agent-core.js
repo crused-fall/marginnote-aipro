@@ -92,6 +92,43 @@ function actionPhase(action) {
   return action?.phase || "enrich";
 }
 
+function uniqueStrings(values) {
+  const seen = new Set();
+  const items = [];
+  for (const value of Array.isArray(values) ? values : []) {
+    const text = String(value || "").trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    items.push(text);
+  }
+  return items;
+}
+
+function legacyCommentPatterns() {
+  return [
+    "Agent review:",
+    "整理建议：已补全或规范标题",
+    "整理建议：已补充摘要摘录",
+  ];
+}
+
+function noteCommentText(comment) {
+  if (!comment) return "";
+  if (typeof comment === "string") return comment;
+  return String(comment.text || comment.q_htext || "");
+}
+
+function shouldRemoveLegacyComment(text, explicitComments) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+
+  if (uniqueStrings(explicitComments).some((comment) => value.indexOf(comment) >= 0)) {
+    return true;
+  }
+
+  return legacyCommentPatterns().some((pattern) => value.indexOf(pattern) >= 0);
+}
+
 function resolveNotebookById(api, notebookId) {
   const id = String(notebookId || "").trim();
   if (!id) return null;
@@ -280,10 +317,15 @@ async function applyAction(action, nodesById, api) {
     }
 
     case "append_comment":
-      if (typeof node.appendTextComments !== "function") {
+      if (typeof node.appendTextComments === "function") {
+        node.appendTextComments(action.comment);
+      } else if (typeof node.appendTextComment === "function") {
+        node.appendTextComment(action.comment);
+      } else if (Array.isArray(node.commentsText)) {
+        node.commentsText.push(action.comment);
+      } else {
         throw new Error(`append_comment_not_supported:${action.noteId}`);
       }
-      node.appendTextComments(action.comment);
       return {
         ok: true,
         type: action.type,
@@ -294,6 +336,135 @@ async function applyAction(action, nodesById, api) {
         planConfidence:
           typeof action?.meta?.confidence === "number" ? action.meta.confidence : null,
       };
+
+    case "remove_comments_by_text": {
+      const comments = uniqueStrings(action.comments);
+      if (!comments.length) {
+        return {
+          ok: false,
+          skipped: true,
+          type: action.type,
+          noteId: action.noteId,
+          reason: "empty_comment_targets",
+          executionDisposition: disposition,
+          actionPhase: actionPhase(action),
+          planSource: action?.meta?.source || "",
+          planConfidence:
+            typeof action?.meta?.confidence === "number" ? action.meta.confidence : null,
+        };
+      }
+
+      const removalDetail = {
+        targets: comments,
+        strategiesTried: [],
+        removedCommentIndices: [],
+      };
+
+      let attemptedRemoval = false;
+      const rawComments = Array.isArray(node.commentsText)
+        ? node.commentsText
+        : Array.isArray(node.comments)
+          ? node.comments
+          : null;
+
+      if (rawComments && typeof node.removeCommentByIndex === "function") {
+        const indicesToRemove = [];
+        rawComments.forEach((comment, index) => {
+          if (shouldRemoveLegacyComment(noteCommentText(comment), comments)) {
+            indicesToRemove.push(index);
+          }
+        });
+
+        if (indicesToRemove.length) {
+          indicesToRemove
+            .sort((a, b) => b - a)
+            .forEach((index) => node.removeCommentByIndex(index));
+          attemptedRemoval = true;
+          removalDetail.strategiesTried.push("note.removeCommentByIndex:scan_comments");
+          removalDetail.removedCommentIndices = indicesToRemove.slice().sort((a, b) => a - b);
+        }
+      }
+
+      if (
+        !attemptedRemoval &&
+        typeof node.getCommentIndex === "function" &&
+        typeof node.removeCommentByIndex === "function"
+      ) {
+        comments.forEach((comment) => {
+          let guard = 0;
+          while (guard < 20) {
+            const index = node.getCommentIndex(comment, true);
+            if (typeof index !== "number" || index < 0) break;
+            node.removeCommentByIndex(index);
+            attemptedRemoval = true;
+            removalDetail.strategiesTried.push("note.getCommentIndex+note.removeCommentByIndex");
+            removalDetail.removedCommentIndices.push(index);
+            guard += 1;
+          }
+        });
+      }
+
+      if (!attemptedRemoval && typeof node.removeCommentByCondition === "function") {
+        legacyCommentPatterns().forEach((pattern) => {
+          node.removeCommentByCondition({
+            type: "text",
+            include: pattern,
+            exclude: "",
+            reg: "",
+          });
+        });
+        attemptedRemoval = true;
+        removalDetail.strategiesTried.push("note.removeCommentByCondition");
+      }
+
+      if (!attemptedRemoval && Array.isArray(node.commentsText)) {
+        const nextComments = [];
+        node.commentsText.forEach((comment, index) => {
+          if (shouldRemoveLegacyComment(noteCommentText(comment), comments)) {
+            attemptedRemoval = true;
+            removalDetail.removedCommentIndices.push(index);
+            return;
+          }
+          nextComments.push(comment);
+        });
+        if (attemptedRemoval) {
+          node.commentsText = nextComments;
+          removalDetail.strategiesTried.push("node.commentsText.splice");
+        }
+      }
+
+      if (!attemptedRemoval && Array.isArray(node.comments)) {
+        const nextComments = [];
+        node.comments.forEach((comment, index) => {
+          if (shouldRemoveLegacyComment(noteCommentText(comment), comments)) {
+            attemptedRemoval = true;
+            removalDetail.removedCommentIndices.push(index);
+            return;
+          }
+          nextComments.push(comment);
+        });
+        if (attemptedRemoval) {
+          node.comments = nextComments;
+          removalDetail.strategiesTried.push("node.comments.splice");
+        }
+      }
+
+      if (!attemptedRemoval) {
+        throw new Error(`remove_comments_by_text_not_supported:${action.noteId}`);
+      }
+
+      return {
+        ok: true,
+        type: action.type,
+        noteId: action.noteId,
+        executionDisposition: disposition,
+        actionPhase: actionPhase(action),
+        planSource: action?.meta?.source || "",
+        planConfidence:
+          typeof action?.meta?.confidence === "number" ? action.meta.confidence : null,
+        executionDetail: removalDetail,
+      };
+    }
 
     case "rewrite_excerpt":
       node.mainExcerptText = action.text;

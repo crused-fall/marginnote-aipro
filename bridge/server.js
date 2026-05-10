@@ -7,6 +7,14 @@ const { planResponse } = require("./planner");
 const { summarizeObsidianSyncSettings } = require("./obsidian-sync");
 const { buildBreakdownArtifactAudit } = require("./breakdown-artifact-audit");
 const { readSupervisorState, summarizeSupervisorState } = require("./supervisor-state");
+const {
+  executeModelRequest,
+  buildModelBackendState,
+  resolveModelBackendConfig,
+  latestExecution: latestModelExecution,
+  loadExecutionArtifacts,
+  findExecutionByTraceId,
+} = require("./model-backend");
 
 const PORT = Number(process.env.MN_AGENT_PORT || 8765);
 const HOST = process.env.MN_AGENT_HOST || "127.0.0.1";
@@ -28,6 +36,7 @@ const BRIDGE_DIR =
     "Caches",
     "MNAIProBridge"
   );
+const MODEL_ARTIFACT_DIR = process.env.MN_AGENT_MODEL_DIR || path.join(BRIDGE_DIR, "model");
 const REQUESTS_DIR = process.env.MN_AGENT_REQUESTS_DIR || path.join(BRIDGE_DIR, "requests");
 const RESPONSES_DIR = process.env.MN_AGENT_RESPONSES_DIR || path.join(BRIDGE_DIR, "responses");
 const REPORTS_DIR = process.env.MN_AGENT_REPORTS_DIR || path.join(BRIDGE_DIR, "reports");
@@ -39,6 +48,16 @@ fs.mkdirSync(REQUESTS_DIR, { recursive: true });
 fs.mkdirSync(RESPONSES_DIR, { recursive: true });
 fs.mkdirSync(REPORTS_DIR, { recursive: true });
 fs.mkdirSync(DIAGNOSTICS_DIR, { recursive: true });
+fs.mkdirSync(MODEL_ARTIFACT_DIR, { recursive: true });
+
+function modelBackendConfig(overrides = {}) {
+  return resolveModelBackendConfig({
+    ...overrides,
+    rootDir: ROOT_DIR,
+    artifactDir: MODEL_ARTIFACT_DIR,
+    env: process.env,
+  });
+}
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload, null, 2);
@@ -266,6 +285,37 @@ function summarizeResponsePayload(payload) {
     objective: plan?.objective || null,
     origin,
     mode: origin === "native_ai_breakdown" ? "breakdown" : "primary",
+  };
+}
+
+function summarizeModelExecutionPayload(payload) {
+  const trace = payload?.trace || payload || {};
+  const request = payload?.request || {};
+  const response = payload?.response || {};
+  return {
+    ok: !!payload?.ok,
+    kind: payload?.kind || trace.kind || "model_execution",
+    status: trace.status || payload?.status || null,
+    dryRun: !!(payload?.dryRun ?? trace.dryRun),
+    requestId: payload?.requestId || trace.requestId || request.requestId || null,
+    traceId: payload?.traceId || trace.traceId || request.traceId || null,
+    replayKey: payload?.replayKey || trace.replayKey || request.replayKey || null,
+    providerType: trace.provider?.type || payload?.provider?.type || null,
+    providerAvailable: !!(trace.provider && trace.provider.available),
+    failureClass: trace.failure?.classification || payload?.failure?.classification || null,
+    fallbackUsed: !!(trace.fallback && trace.fallback.used),
+    requestMessageCount:
+      typeof trace.request === "object" && trace.request && typeof trace.request.messageCount === "number"
+        ? trace.request.messageCount
+        : typeof request.inputSummary?.messageCount === "number"
+          ? request.inputSummary.messageCount
+          : 0,
+    responseToolCallCount:
+      typeof response.summary?.toolCallCount === "number"
+        ? response.summary.toolCallCount
+        : typeof trace.response?.toolCallCount === "number"
+          ? trace.response.toolCallCount
+          : 0,
   };
 }
 
@@ -529,6 +579,9 @@ function bridgeStatus() {
   const latestFollowupApply = latestReport("followup_apply");
   const latestApply = latestReport("apply");
   const latestDiagnostic = latestDiagnosticWithFallback();
+  const modelConfig = modelBackendConfig();
+  const latestModel = latestModelExecution(modelConfig);
+  const modelBackend = buildModelBackendState(modelConfig);
   const obsidianSyncSettings = summarizeObsidianSyncSettings(defaultObsidianVaultPath());
   const breakdownArtifacts = buildBreakdownArtifactAudit({
     reportsDir: REPORTS_DIR,
@@ -547,6 +600,22 @@ function bridgeStatus() {
     queue,
     obsidianVaultPath: obsidianSyncSettings.vaultPath,
     obsidianSyncSettings,
+    modelBackend: latestModel
+      ? {
+          ...modelBackend,
+          latest: summarizeModelExecutionPayload(latestModel),
+        }
+      : modelBackend,
+    latestModelExecution: latestModel
+      ? {
+          file: latestModel.file,
+          fullPath: latestModel.fullPath,
+          mtimeMs: latestModel.mtimeMs,
+          requestId: latestModel.trace?.requestId || latestModel.request?.requestId || null,
+          traceId: latestModel.trace?.traceId || latestModel.request?.traceId || null,
+          summary: summarizeModelExecutionPayload(latestModel),
+        }
+      : null,
     breakdownArtifacts,
     breakdownNextCommand: breakdownArtifacts.nextCommand || "mnaipro breakdown artifacts --json",
     supervisorState,
@@ -635,6 +704,99 @@ function bridgeStatus() {
   };
 }
 
+async function handleModelRun(req, res, url) {
+  try {
+    const payload = await readJson(req);
+    const execution = await executeModelRequest(payload, modelBackendConfig());
+    sendJson(res, 200, {
+      ok: execution.ok,
+      kind: execution.kind,
+      status: execution.status,
+      requestId: execution.requestId,
+      traceId: execution.traceId,
+      replayKey: execution.replayKey,
+      dryRun: execution.dryRun,
+      provider: execution.provider,
+      request: execution.request,
+      response: execution.response,
+      trace: execution.trace,
+      failure: execution.failure,
+      fallback: execution.fallback,
+      artifacts: execution.artifacts,
+      toolBoundaries: execution.toolBoundaries,
+    });
+  } catch (error) {
+    sendJson(res, 400, {
+      ok: false,
+      error: error.message || String(error),
+    });
+  }
+}
+
+async function handleModelReplay(req, res) {
+  try {
+    const payload = await readJson(req);
+    const config = modelBackendConfig();
+    const source =
+      (payload && payload.requestId && loadExecutionArtifacts(config, payload.requestId)) ||
+      (payload && payload.traceId && findExecutionByTraceId(config, payload.traceId)) ||
+      null;
+    if (!source) {
+      sendJson(res, 404, {
+        ok: false,
+        error: "not_found",
+      });
+      return;
+    }
+
+    const basePayload = source.request && source.request.originalPayload ? source.request.originalPayload : {};
+    const replayPayload = {
+      ...basePayload,
+      requestId: payload.requestId || basePayload.requestId || null,
+      dryRun:
+        typeof payload.dryRun === "boolean"
+          ? payload.dryRun
+          : typeof basePayload.dryRun === "boolean"
+            ? basePayload.dryRun
+            : true,
+      replayFrom: {
+        requestId: source.trace && source.trace.requestId ? source.trace.requestId : source.request?.requestId || null,
+        traceId: source.trace && source.trace.traceId ? source.trace.traceId : source.request?.traceId || null,
+        replayKey: source.trace && source.trace.replayKey ? source.trace.replayKey : source.request?.replayKey || null,
+      },
+    };
+
+    const execution = await executeModelRequest(replayPayload, config);
+    sendJson(res, 200, {
+      ok: execution.ok,
+      kind: execution.kind,
+      status: execution.status,
+      requestId: execution.requestId,
+      traceId: execution.traceId,
+      replayKey: execution.replayKey,
+      dryRun: execution.dryRun,
+      provider: execution.provider,
+      request: execution.request,
+      response: execution.response,
+      trace: execution.trace,
+      failure: execution.failure,
+      fallback: execution.fallback,
+      artifacts: execution.artifacts,
+      toolBoundaries: execution.toolBoundaries,
+      replayOf: {
+        requestId: replayPayload.replayFrom.requestId,
+        traceId: replayPayload.replayFrom.traceId,
+        replayKey: replayPayload.replayFrom.replayKey,
+      },
+    });
+  } catch (error) {
+    sendJson(res, 400, {
+      ok: false,
+      error: error.message || String(error),
+    });
+  }
+}
+
 function processBridgeRequestFile(fileName) {
   const requestPath = path.join(REQUESTS_DIR, fileName);
   const requestId = path.basename(fileName, path.extname(fileName));
@@ -716,6 +878,41 @@ function createServer() {
           error: error.message || String(error),
         });
       }
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/model/run") {
+      await handleModelRun(req, res, url);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/model/replay") {
+      await handleModelReplay(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/model/latest") {
+      const config = modelBackendConfig();
+      const latest = latestModelExecution(config);
+      if (!latest) {
+        sendJson(res, 404, {
+          ok: false,
+          error: "not_found",
+        });
+        return;
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        derived: false,
+        file: latest.file,
+        fullPath: latest.fullPath,
+        mtimeMs: latest.mtimeMs,
+        request: latest.request,
+        response: latest.response,
+        trace: latest.trace,
+        summary: summarizeModelExecutionPayload(latest),
+      });
       return;
     }
 
@@ -886,9 +1083,13 @@ module.exports = {
   RESPONSES_DIR,
   REPORTS_DIR,
   DIAGNOSTICS_DIR,
+  MODEL_ARTIFACT_DIR,
   bridgeStatus,
   latestReport,
   latestDiagnosticWithFallback,
   latestFollowupWithFallback,
   latestQueueArtifact,
+  latestModelExecution,
+  loadExecutionArtifacts,
+  findExecutionByTraceId,
 };

@@ -18,6 +18,21 @@ const {
 const { summarizeObsidianSyncSettings } = require("../bridge/obsidian-sync");
 const { planResponse } = require("../bridge/planner");
 const { buildBreakdownArtifactAudit } = require("../bridge/breakdown-artifact-audit");
+const {
+  buildExperimentalState,
+  formatExperimentalCompact,
+  formatExperimentalLines,
+} = require("../bridge/experimental/gate");
+const {
+  buildExperimentalDiagnosticsReport,
+  formatExperimentalDiagnosticsCompact,
+  formatExperimentalDiagnosticsLines,
+} = require("../bridge/experimental/diagnostics");
+const {
+  buildExperimentalRegistryReport,
+  formatExperimentalRegistryCompact,
+  formatExperimentalRegistryLines,
+} = require("../bridge/experimental/registry");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const DEFAULT_BASE_URL = process.env.MN_AGENT_BASE_URL || "http://127.0.0.1:8765";
@@ -58,6 +73,29 @@ function compactText(value) {
   return String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isBranchOverviewAction(action) {
+  return (
+    !!action &&
+    action.type === "rewrite_excerpt" &&
+    action.meta?.source === "branch_structure_digest"
+  );
+}
+
+function collectBranchOverviewActions(actions) {
+  return (Array.isArray(actions) ? actions : []).filter(isBranchOverviewAction);
+}
+
+function buildExperimentalSurfaceSection(experimentalState) {
+  return {
+    label: "Experimental",
+    prefix: "mnaipro experimental",
+    commands: ["status", "diagnostics", "registry"],
+    summary: experimentalState.enabled
+      ? "Opt-in experimental gate, status, diagnostics, and registry."
+      : "Opt-in experimental gate is disabled.",
+  };
 }
 
 function summarizeBreakdownAuditInline(audit) {
@@ -246,6 +284,7 @@ function summarizePlanPlan(plan) {
   const counts = plan?.actionDispositionCounts || {};
   const phaseCounts = plan?.actionPhaseCounts || {};
   const primaryPack = packs[0] || null;
+  const branchOverviewActions = collectBranchOverviewActions(actions);
 
   return {
     objective: plan?.objective || null,
@@ -262,6 +301,7 @@ function summarizePlanPlan(plan) {
     actionDispositionCounts: counts,
     actionPhaseCounts: phaseCounts,
     shapeSummary: plan?.shapeSummary || null,
+    branchOverviewActionCount: branchOverviewActions.length,
     primaryStrategyPack: primaryPack
       ? {
           type: primaryPack.type || null,
@@ -281,6 +321,28 @@ function summarizePlanPlan(plan) {
           reason: primaryPack.reason || null,
         }
       : null,
+  };
+}
+
+function summarizeModelExecutionPlan(run) {
+  const trace = run?.trace || {};
+  const response = run?.response || {};
+  return {
+    ok: !!run?.ok,
+    kind: run?.kind || "model_execution",
+    status: run?.status || trace.status || null,
+    dryRun: !!(run?.dryRun ?? trace.dryRun),
+    requestId: run?.requestId || trace.requestId || null,
+    traceId: run?.traceId || trace.traceId || null,
+    replayKey: run?.replayKey || trace.replayKey || null,
+    providerType: run?.provider?.type || trace.provider?.type || null,
+    providerAvailable: !!(run?.provider && run.provider.available),
+    failureClass: run?.failure?.classification || trace.failure?.classification || null,
+    fallbackUsed: !!(run?.fallback && run.fallback.used),
+    requestMessageCount:
+      run?.request?.inputSummary?.messageCount ?? trace.request?.messageCount ?? 0,
+    responseToolCallCount:
+      response.summary?.toolCallCount ?? trace.response?.toolCallCount ?? 0,
   };
 }
 
@@ -494,6 +556,9 @@ function formatApplyLines(reportInfo) {
   const skippedCount = results.filter((item) => item.skipped).length;
   const errorItems = results.filter((item) => item.error);
   const changedNotes = report.branchDiff?.changedNotes || [];
+  const overviewFillResults = results.filter(
+    (item) => item.type === "rewrite_excerpt" && item.planSource === "branch_structure_digest"
+  );
   const origin = report.origin || "";
   const mode = origin === "native_ai_breakdown" ? "breakdown" : "primary";
   const command = report.command || report.objective || "(unknown)";
@@ -570,6 +635,16 @@ function formatApplyLines(reportInfo) {
     });
   }
 
+  if (overviewFillResults.length) {
+    lines.push("", "Branch overview fills:");
+    lines.push(`- count: ${overviewFillResults.length}`);
+    overviewFillResults.slice(0, 10).forEach((item) => {
+      lines.push(
+        `- ${item.noteId} | source=${item.planSource || "unknown"} | disposition=${item.executionDisposition || "unknown"} | path=${item.apiPath || "unknown"}`
+      );
+    });
+  }
+
   const structureItems = results
     .filter((item) => item.type === "organize_branch_groups" && item.executionDetail)
     .slice(0, 10);
@@ -612,6 +687,9 @@ function applyArtifactEnvelope(info) {
   const helperBlockedActions = Array.isArray(report.helperBlockedActions)
     ? report.helperBlockedActions
     : [];
+  const overviewFillResults = results.filter(
+    (item) => item.type === "rewrite_excerpt" && item.planSource === "branch_structure_digest"
+  );
   return {
     ok: true,
     kind: "apply",
@@ -632,6 +710,7 @@ function applyArtifactEnvelope(info) {
       errorCount: results.filter((item) => item.error).length,
       helperBlockedCount: helperBlockedActions.length,
       changedNoteCount: report.branchDiff?.changedNoteCount || 0,
+      overviewFillCount: overviewFillResults.length,
     },
   };
 }
@@ -904,17 +983,48 @@ function replayRequest(requestInfo) {
 }
 
 function formatReplayLines(result) {
+  const generatedSummary = summarizePlanPlan(result.generated?.plan || {});
+  const cachedSummary = result.cached ? summarizePlanPlan(result.cached?.plan || {}) : null;
   const lines = [
     `Request: ${result.request}`,
     `Path: ${result.requestPath}`,
     `Status: ${result.comparison.matches ? "MATCH" : "DIFF"}`,
     `Reason: ${result.comparison.reason}`,
-    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}`,
+    `Generated: actions=${result.comparison.generated.actions}, notes=${result.comparison.generated.notes}, unsupported=${result.comparison.generated.unsupportedActions}, packs=${generatedSummary.strategyPackCount}, overview=${generatedSummary.branchOverviewActionCount}`,
   ];
 
+  if (generatedSummary.strategyPackCount > 0) {
+    lines.push("", "Strategy packs:");
+    lines.push(`- count: ${generatedSummary.strategyPackCount}`);
+    if (generatedSummary.primaryStrategyPack) {
+      const primary = generatedSummary.primaryStrategyPack;
+      lines.push(
+        `- primary: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+      );
+      if (primary.summary) {
+        lines.push(`- summary: ${primary.summary}`);
+      }
+      if (primary.reason) {
+        lines.push(`- reason: ${primary.reason}`);
+      }
+    }
+  }
+
+  if (generatedSummary.branchOverviewActionCount > 0) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${generatedSummary.branchOverviewActionCount}`);
+    collectBranchOverviewActions(result.generated?.plan?.actions || []).slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
+  }
+
   if (result.comparison.cached) {
+    const cachedLine = `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}, packs=${cachedSummary.strategyPackCount}, overview=${cachedSummary.branchOverviewActionCount}`;
     lines.push(
-      `Cached: actions=${result.comparison.cached.actions}, notes=${result.comparison.cached.notes}, unsupported=${result.comparison.cached.unsupportedActions}`
+      cachedLine
     );
   }
 
@@ -922,14 +1032,16 @@ function formatReplayLines(result) {
 }
 
 function formatReplayCompact(result) {
+  const generatedSummary = summarizePlanPlan(result.generated?.plan || {});
+  const cachedSummary = result.cached ? summarizePlanPlan(result.cached?.plan || {}) : null;
   const cached = result.comparison.cached
-    ? ` cached=actions:${result.comparison.cached.actions},notes:${result.comparison.cached.notes},unsupported:${result.comparison.cached.unsupportedActions}`
+    ? ` cached=actions:${result.comparison.cached.actions},notes:${result.comparison.cached.notes},unsupported:${result.comparison.cached.unsupportedActions},packs:${cachedSummary.strategyPackCount},overview:${cachedSummary.branchOverviewActionCount}`
     : "";
   return [
     `request=${result.request}`,
     `status=${result.comparison.matches ? "MATCH" : "DIFF"}`,
     `reason=${result.comparison.reason}`,
-    `generated=actions:${result.comparison.generated.actions},notes:${result.comparison.generated.notes},unsupported:${result.comparison.generated.unsupportedActions}`,
+    `generated=actions:${result.comparison.generated.actions},notes:${result.comparison.generated.notes},unsupported:${result.comparison.generated.unsupportedActions},packs:${generatedSummary.strategyPackCount},overview:${generatedSummary.branchOverviewActionCount}`,
     cached,
   ]
     .filter(Boolean)
@@ -956,8 +1068,28 @@ function normalizeAfterBranchNotes(report) {
 
 async function handleStatus(options) {
   const statusInfo = await readStatus(options.baseUrl || DEFAULT_BASE_URL);
+  const payload = buildStatusReport(statusInfo, options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH);
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+  if (options.compact) {
+    const followupApplyRequest = payload.latestFollowupApply
+      ? payload.latestFollowupApply.requestId || "unknown"
+      : "none";
+    const supervisorState = payload.supervisorState || null;
+    const modelBackendState = payload.modelBackend || null;
+    outputText(
+      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
+    );
+    return;
+  }
+  outputJson(payload);
+}
+
+function buildStatusReport(statusInfo, obsidianVaultPath) {
   const obsidianSyncSettings = summarizeObsidianSyncSettings(
-    options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH
+    obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH
   );
   const breakdownArtifacts =
     (statusInfo.payload &&
@@ -970,33 +1102,23 @@ async function handleStatus(options) {
       statusInfo.payload.latest &&
       statusInfo.payload.latest.followupApply) ||
     null;
+  const modelBackend = (statusInfo.payload && statusInfo.payload.modelBackend) || null;
   const bridgeLive = statusInfo.source === "live_http";
   const payload = {
     ...(statusInfo.payload && typeof statusInfo.payload === "object" ? statusInfo.payload : {}),
     kind: "status",
     title: "mnaipro status",
-    summary: `Bridge ${bridgeLive ? "live" : "offline"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
+    summary: `Bridge ${bridgeLive ? "live" : "offline"}; model backend ${modelBackend && modelBackend.configured ? `${modelBackend.available ? "ready" : "configured"}${modelBackend.reason && !modelBackend.available ? ` (${modelBackend.reason})` : ""}` : "disabled"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
     breakdownArtifacts,
     breakdownNextCommand: breakdownArtifacts.nextCommand || "mnaipro breakdown artifacts --json",
     latestFollowupApply,
     obsidianSyncSettings,
     obsidianVaultPath: obsidianSyncSettings.vaultPath,
   };
-  if (options.json) {
-    outputJson(payload);
-    return;
+  if (modelBackend) {
+    payload.modelBackend = modelBackend;
   }
-  if (options.compact) {
-    const followupApplyRequest = payload.latestFollowupApply
-      ? payload.latestFollowupApply.requestId || "unknown"
-      : "none";
-    const supervisorState = payload.supervisorState || null;
-    outputText(
-      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${breakdownArtifacts.status || "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${obsidianSyncSettings.exists ? "present" : "missing"}`
-    );
-    return;
-  }
-  outputJson(payload);
+  return payload;
 }
 
 async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
@@ -1006,6 +1128,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
   const obsidianSyncSettings = summarizeObsidianSyncSettings(obsidianVaultPath);
   const breakdownArtifacts = bridgePayload.breakdownArtifacts || buildBreakdownArtifactAudit();
   const latestFollowupApply = bridgePayload.latestFollowupApply || bridgePayload.latest?.followupApply || null;
+  const modelBackend = bridgePayload.modelBackend || null;
   const supervisorState = bridgePayload.supervisorState || null;
   const label = `gui/${process.getuid()}/com.mnaipro.bridge-supervisor`;
   const launchctlInfo = launchctlPrint(label);
@@ -1065,7 +1188,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     ok: true,
     kind: "doctor",
     title: "mnaipro doctor",
-    summary: `Bridge ${bridgeReachable ? "reachable" : "offline"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
+    summary: `Bridge ${bridgeReachable ? "reachable" : "offline"}; model backend ${modelBackend && modelBackend.configured ? `${modelBackend.available ? "ready" : "configured"}` : "disabled"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
     source: statusInfo.source,
     bridgeOffline: !bridgeReachable,
     bridgeOfflineReason: bridgeReachable ? null : bridgePayload.bridgeOfflineReason || null,
@@ -1074,6 +1197,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     breakdownNextCommand: breakdownArtifacts.nextCommand || "mnaipro breakdown artifacts --json",
     obsidianSyncSettings,
     supervisorState,
+    modelBackend,
     latestFollowupApply,
     statusHint: inferBridgeStatusHint({
       checks,
@@ -1105,6 +1229,177 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     supervisor,
     checks,
     missing,
+  };
+}
+
+function buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport) {
+  const breakdownStatus = statusReport.breakdownArtifacts ? statusReport.breakdownArtifacts.status || "unknown" : "unknown";
+  const followupApply = statusReport.latestFollowupApply || null;
+  const obsidianSettings = statusReport.obsidianSyncSettings || null;
+  const modelBackend = statusReport.modelBackend || null;
+  const surfaces = [
+    {
+      key: "status",
+      label: "Bridge status",
+      present: true,
+      summary: statusReport.summary || "Bridge status is unavailable.",
+      evidence: [
+        `source:${statusReport.source || "unknown"}`,
+        `breakdown:${breakdownStatus}`,
+        `followup_apply:${followupApply ? "present" : "missing"}`,
+      ],
+      nextCommand: "mnaipro status --json",
+    },
+    {
+      key: "doctor",
+      label: "Bridge doctor",
+      present: true,
+      summary: doctorReport.summary || "Bridge doctor is unavailable.",
+      evidence: [
+        `source:${doctorReport.source || "unknown"}`,
+        `warnings:${Array.isArray(doctorReport.warnings) ? doctorReport.warnings.length : 0}`,
+        `missing:${Array.isArray(doctorReport.missing) ? doctorReport.missing.length : 0}`,
+      ],
+      nextCommand: "mnaipro doctor --json",
+    },
+    {
+      key: "capabilities",
+      label: "Command surface",
+      present: true,
+      summary: capabilitiesReport.summary || "Command surface is unavailable.",
+      evidence: [
+        `commands:${capabilitiesReport.commandCount || 0}`,
+        `groups:${capabilitiesReport.groupCount || 0}`,
+        `top_level:${capabilitiesReport.topLevelCount || 0}`,
+      ],
+      nextCommand: "mnaipro capabilities --json",
+    },
+    {
+      key: "breakdown",
+      label: "Breakdown audit",
+      present: true,
+      summary:
+        breakdownStatus === "complete"
+          ? "Breakdown artifacts are complete."
+          : `Breakdown artifacts are ${breakdownStatus}.`,
+      evidence: [
+        `next:${statusReport.breakdownNextCommand || "unknown"}`,
+        `status:${breakdownStatus}`,
+      ],
+      nextCommand: statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
+    },
+    {
+      key: "model_backend",
+      label: "Model backend",
+      present: true,
+      summary: modelBackend
+        ? modelBackend.configured
+          ? modelBackend.available
+            ? `Model backend ${modelBackend.provider?.type || "unknown"} is ready.`
+            : `Model backend ${modelBackend.provider?.type || "unknown"} is configured but unavailable.`
+          : "Model backend is disabled."
+        : "Model backend is unavailable.",
+      evidence: [
+        `provider:${modelBackend && modelBackend.provider ? modelBackend.provider.type || "unknown" : "disabled"}`,
+        `configured:${modelBackend && modelBackend.configured ? "yes" : "no"}`,
+        `available:${modelBackend && modelBackend.available ? "yes" : "no"}`,
+        `latest:${modelBackend && modelBackend.latest ? modelBackend.latest.status || "unknown" : "none"}`,
+      ],
+      nextCommand: modelBackend && modelBackend.nextCommand ? modelBackend.nextCommand : "mnaipro request post /model/run --json",
+    },
+    {
+      key: "obsidian_settings",
+      label: "Obsidian settings",
+      present: true,
+      summary: obsidianSettings && obsidianSettings.exists
+        ? obsidianSettings.summary || "Obsidian sync settings are visible."
+        : "Obsidian sync settings are missing.",
+      evidence: [
+        obsidianSettings && obsidianSettings.settingsPath
+          ? `settings_path:${obsidianSettings.settingsPath}`
+          : "settings_path:missing",
+      ],
+      nextCommand: "mn-obsidian-bridge ob settings export ./ob-settings.snapshot.json --snapshot",
+    },
+  ];
+
+  return {
+    surfaces,
+    visibleCount: surfaces.filter((surface) => surface.present).length,
+    totalCount: surfaces.length,
+    missing: surfaces.filter((surface) => !surface.present).map((surface) => surface.key),
+  };
+}
+
+async function buildOverviewReport(program, options = {}) {
+  const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
+  const obsidianVaultPath = options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH;
+  const statusInfo = await readStatus(baseUrl);
+  const statusReport = buildStatusReport(statusInfo, obsidianVaultPath);
+  const doctorReport = await buildDoctorSummary(baseUrl, obsidianVaultPath);
+  const capabilitiesReport = buildCapabilitiesReport(program);
+  const surfaceState = buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport);
+  const highlightState = {
+    bridgeLive: statusReport.source === "live_http",
+    bridgeReachable: !doctorReport.bridgeOffline,
+    capabilitiesVisible: !!capabilitiesReport,
+    breakdownComplete: statusReport.breakdownArtifacts && statusReport.breakdownArtifacts.status === "complete",
+    modelBackendVisible: !!statusReport.modelBackend,
+    followupApplyVisible: !!statusReport.latestFollowupApply,
+    obsidianSettingsVisible: !!(statusReport.obsidianSyncSettings && statusReport.obsidianSyncSettings.exists),
+  };
+  const warnings = [];
+  if (!highlightState.bridgeLive) warnings.push("bridge_offline");
+  if (!highlightState.bridgeReachable) warnings.push("doctor_offline");
+  if (!highlightState.capabilitiesVisible) warnings.push("capabilities_missing");
+  if (!highlightState.breakdownComplete) warnings.push("breakdown_incomplete");
+  if (!highlightState.modelBackendVisible) warnings.push("model_backend_missing");
+  if (!highlightState.followupApplyVisible) warnings.push("followup_apply_missing");
+  if (!highlightState.obsidianSettingsVisible) warnings.push("obsidian_settings_missing");
+
+  const summary = `Agent workflow overview: ${statusReport.summary || "status unavailable"}; ${capabilitiesReport.commandCount} runnable commands across ${capabilitiesReport.groupCount} groups.`;
+
+  const recommendedCommands = [
+    "mnaipro doctor --json",
+    "mnaipro status --json",
+    "mnaipro capabilities --json",
+    statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
+    "mnaipro followup apply latest --json",
+  ];
+
+  return {
+    ok: true,
+    kind: "overview",
+    title: "mnaipro overview",
+    summary,
+    warnings,
+    source: statusReport.source || statusInfo.source || "unknown",
+    status: statusReport,
+    doctor: doctorReport,
+    capabilities: capabilitiesReport,
+    surfaces: surfaceState.surfaces,
+    surfaceCounts: {
+      visible: surfaceState.visibleCount,
+      total: surfaceState.totalCount,
+      statusVisible: highlightState.bridgeLive ? 1 : 0,
+      doctorVisible: highlightState.bridgeReachable ? 1 : 0,
+      capabilitiesVisible: 1,
+      breakdownVisible: highlightState.breakdownComplete ? 1 : 0,
+      modelBackendVisible: highlightState.modelBackendVisible ? 1 : 0,
+      followupApplyVisible: highlightState.followupApplyVisible ? 1 : 0,
+      obsidianSettingsVisible: highlightState.obsidianSettingsVisible ? 1 : 0,
+      commandCount: capabilitiesReport.commandCount || 0,
+      groupCount: capabilitiesReport.groupCount || 0,
+      topLevelCount: capabilitiesReport.topLevelCount || 0,
+    },
+    highlights: highlightState,
+    recommendedCommands,
+    nextCommand: recommendedCommands[0],
+    details: {
+      status: statusReport,
+      doctor: doctorReport,
+      capabilities: capabilitiesReport,
+    },
   };
 }
 
@@ -1162,6 +1457,25 @@ function formatDoctorLines(report) {
     }
   }
 
+  if (report.modelBackend) {
+    const modelBackend = report.modelBackend;
+    const latestModel = modelBackend.latest || null;
+    lines.push(
+      `Model backend: provider=${modelBackend.provider?.type || "disabled"} | configured=${modelBackend.configured ? "yes" : "no"} | available=${modelBackend.available ? "yes" : "no"} | dryRunDefault=${modelBackend.dryRunDefault ? "yes" : "no"}`
+    );
+    if (modelBackend.reason) {
+      lines.push(`Model backend reason: ${modelBackend.reason}`);
+    }
+    if (latestModel) {
+      lines.push(
+        `Latest model trace: ${latestModel.requestId || "unknown"} | status=${latestModel.status || "unknown"} | dryRun=${latestModel.dryRun ? "yes" : "no"} | provider=${latestModel.providerType || "unknown"} | replayKey=${latestModel.replayKey || "unknown"}`
+      );
+    }
+    if (modelBackend.nextCommand) {
+      lines.push(`Model backend next: ${modelBackend.nextCommand}`);
+    }
+  }
+
   if (report.supervisorState) {
     lines.push(
       `Bridge supervisor: ownership=${report.supervisorState.ownership || "unknown"} | pid=${report.supervisorState.bridgePid || "none"} | updatedAt=${report.supervisorState.updatedAt || "(unknown)"}`
@@ -1188,6 +1502,58 @@ function formatDoctorLines(report) {
   }
 
   return lines.join("\n");
+}
+
+function formatOverviewLines(report) {
+  const counts = report.surfaceCounts || {};
+  const highlights = report.highlights || {};
+  const lines = [
+    `Overview summary: ${report.summary || "(none)"}`,
+    `Visible surfaces: ${counts.visible || 0}/${counts.total || 0}`,
+    `Bridge live: ${highlights.bridgeLive ? "yes" : "no"}`,
+    `Bridge reachable: ${highlights.bridgeReachable ? "yes" : "no"}`,
+    `Breakdown complete: ${highlights.breakdownComplete ? "yes" : "no"}`,
+    `Model backend visible: ${highlights.modelBackendVisible ? "yes" : "no"}`,
+    `Follow-up apply visible: ${highlights.followupApplyVisible ? "yes" : "no"}`,
+    `Obsidian settings visible: ${highlights.obsidianSettingsVisible ? "yes" : "no"}`,
+    `Command count: ${counts.commandCount || 0}`,
+    `Group count: ${counts.groupCount || 0}`,
+  ];
+
+  if (Array.isArray(report.surfaces) && report.surfaces.length) {
+    lines.push("", "Surfaces:");
+    for (const surface of report.surfaces) {
+      lines.push(
+        `- ${surface.label} | ${surface.present ? "present" : "missing"} | ${surface.summary || "no summary"}`
+      );
+    }
+  }
+
+  if (Array.isArray(report.recommendedCommands) && report.recommendedCommands.length) {
+    lines.push("", "Recommended commands:");
+    for (const command of report.recommendedCommands) {
+      lines.push(`- ${command}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function formatOverviewCompact(report) {
+  const counts = report.surfaceCounts || {};
+  const highlights = report.highlights || {};
+  return [
+    `ok=${report.ok ? "yes" : "no"}`,
+    `kind=${report.kind || "unknown"}`,
+    `visible=${counts.visible || 0}/${counts.total || 0}`,
+    `bridge=${highlights.bridgeLive ? "live" : "offline"}`,
+    `reachable=${highlights.bridgeReachable ? "yes" : "no"}`,
+    `breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"}`,
+    `model_backend=${highlights.modelBackendVisible ? "visible" : "missing"}`,
+    `commands=${counts.commandCount || 0}`,
+    `groups=${counts.groupCount || 0}`,
+    `next=${report.nextCommand || "none"}`,
+  ].join(" ");
 }
 
 function inferBridgeStatusHint(report) {
@@ -1332,31 +1698,123 @@ function bridgeHelpFooter() {
     "Bridge log modes:",
     "  One-shot:     mnaipro bridge logs --scope both --lines 40",
     "  Follow:       mnaipro bridge logs --follow --interval 2",
+    "",
+    "Raw bridge access:",
+    "  GET:          mnaipro request get /status",
+    "  POST:         mnaipro request post /model/run --body '{\"dryRun\":true}'",
+    "  REPLAY:       mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
   ].join("\n");
 }
 
-function topLevelHelpFooter() {
+function buildCommandSurfaceDocs(experimentalState = buildExperimentalState(process.env)) {
+  const sections = [
+      {
+        label: "Overview",
+        prefix: "mnaipro",
+        commands: ["overview"],
+        summary: "Top-level workflow evidence map.",
+      },
+      {
+        label: "Bridge ops",
+        prefix: "mnaipro bridge",
+        commands: ["status", "doctor", "render", "reload", "logs"],
+        summary: "Bridge lifecycle commands for deploy, status, and local health checks.",
+      },
+      {
+        label: "Artifacts",
+        prefix: "mnaipro",
+        commands: [
+          "status",
+          "doctor",
+          "plan latest",
+          "followup latest",
+          "followup apply latest",
+          "report latest",
+          "diag latest",
+        ],
+        summary: "Inspect the latest plan, follow-up, apply, and diagnostic artifacts.",
+      },
+      {
+        label: "Replay",
+        prefix: "mnaipro replay",
+        commands: ["latest", "after-apply"],
+        summary: "Replay cached bridge requests.",
+      },
+      {
+        label: "Breakdown",
+        prefix: "mnaipro breakdown",
+        commands: ["smoke", "postprocess", "artifacts"],
+        summary: "Breakdown-specific helpers.",
+      },
+      {
+        label: "Raw access",
+        prefix: "mnaipro request",
+        commands: ["get /status", "post /model/run", "post /model/replay"],
+        summary: "Raw bridge request passthrough for read and execute surfaces.",
+      },
+    ];
+
+  if (experimentalState.enabled) {
+    sections.push(buildExperimentalSurfaceSection(experimentalState));
+  }
+
+  const commonFlows = [
+    "mnaipro overview --json",
+    "mnaipro bridge doctor",
+    "mnaipro bridge reload",
+    "mnaipro bridge logs --follow --interval 2",
+    "mnaipro breakdown smoke --json",
+    "mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
+    "mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
+    "mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
+    "mnaipro breakdown postprocess",
+    "mnaipro breakdown artifacts --json",
+    "mnaipro request get /model/latest",
+    "mnaipro request post /model/run --body '{\"dryRun\":true}'",
+    "mnaipro request post /model/replay --body '{\"traceId\":\"<trace-id>\",\"dryRun\":true}'",
+  ];
+
+  if (experimentalState.enabled) {
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental status --json");
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental diagnostics --json");
+    commonFlows.push("MNAIPRO_EXPERIMENTAL=1 mnaipro experimental registry --json");
+  }
+
+  return {
+    sections,
+    discovery: {
+      label: "Discovery",
+      command: "mnaipro capabilities --json",
+      summary: "Inspect the CLI command registry and capability groups.",
+    },
+    commonFlows,
+  };
+}
+
+function formatCommandSurfaceLine(label, body) {
+  const spacing = Math.max(1, 13 - String(label || "").length);
+  return `  ${label}:${" ".repeat(spacing)}${body}`;
+}
+
+function formatCommandSurfaceSection(section) {
+  const commands = Array.isArray(section?.commands) ? section.commands.join(" | ") : "";
+  return formatCommandSurfaceLine(section.label, `${section.prefix} ${commands}`.trim());
+}
+
+function formatCommandSurfaceFooter(surfaceDocs = buildCommandSurfaceDocs()) {
   return [
     "",
     "Command groups:",
-    "  Bridge ops:   mnaipro bridge status | doctor | render | reload | logs",
-    "  Artifacts:    mnaipro status | doctor | plan latest | followup latest | followup apply latest | report latest | diag latest",
-    "  Replay:       mnaipro replay latest | replay after-apply",
-    "  Breakdown:    mnaipro breakdown smoke | postprocess | artifacts",
-    "  Raw access:   mnaipro request get /status",
-    "  Discovery:    mnaipro capabilities --json",
+    ...surfaceDocs.sections.map(formatCommandSurfaceSection),
+    formatCommandSurfaceLine(surfaceDocs.discovery.label, surfaceDocs.discovery.command),
     "",
     "Common flows:",
-    "  mnaipro bridge doctor",
-    "  mnaipro bridge reload",
-    "  mnaipro bridge logs --follow --interval 2",
-    "  mnaipro breakdown smoke --json",
-    "  mnaipro breakdown smoke --bridge-base-url http://127.0.0.1:8765 --compact",
-    "  mnaipro breakdown smoke --base-url http://127.0.0.1:8765 --case organized-enough --json",
-    "  mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough --json",
-    "  mnaipro breakdown postprocess",
-    "  mnaipro breakdown artifacts --json",
+    ...surfaceDocs.commonFlows.map((flow) => `  ${flow}`),
   ].join("\n");
+}
+
+function topLevelHelpFooter(experimentalState = buildExperimentalState(process.env)) {
+  return formatCommandSurfaceFooter(buildCommandSurfaceDocs(experimentalState));
 }
 
 function summarizeCommandOptions(command) {
@@ -1469,8 +1927,21 @@ function collectCapabilityRegistry(program) {
   };
 }
 
-function buildCapabilitiesReport(program) {
+function buildCapabilitiesReport(program, experimentalState = buildExperimentalState(process.env)) {
   const registry = collectCapabilityRegistry(program);
+  const surfaceDocs = buildCommandSurfaceDocs(experimentalState);
+  const recommendedCommands = [
+    "mnaipro overview --json",
+    "mnaipro capabilities --json",
+    "mnaipro status --compact",
+    "mnaipro doctor",
+    "mnaipro breakdown artifacts --json",
+  ];
+  if (experimentalState.enabled) {
+    recommendedCommands.push("mnaipro experimental status --json");
+    recommendedCommands.push("mnaipro experimental diagnostics --json");
+    recommendedCommands.push("mnaipro experimental registry --json");
+  }
   return {
     ok: true,
     kind: "capabilities",
@@ -1484,12 +1955,8 @@ function buildCapabilitiesReport(program) {
     topLevel: registry.topLevel,
     groups: registry.groups,
     registry: registry.registry,
-    recommendedCommands: [
-      "mnaipro capabilities --json",
-      "mnaipro status --compact",
-      "mnaipro doctor",
-      "mnaipro breakdown artifacts --json",
-    ],
+    surfaceDocs,
+    recommendedCommands,
     warnings: [],
   };
 }
@@ -1538,8 +2005,8 @@ function formatCapabilitiesCompact(report) {
   ].join(" ");
 }
 
-async function handleCapabilities(program, options) {
-  const report = buildCapabilitiesReport(program);
+async function handleCapabilities(program, options, experimentalState = buildExperimentalState(process.env)) {
+  const report = buildCapabilitiesReport(program, experimentalState);
   if (options.json) {
     outputJson(report);
     return;
@@ -1549,6 +2016,61 @@ async function handleCapabilities(program, options) {
     return;
   }
   outputText(formatCapabilitiesLines(report));
+}
+
+async function handleExperimentalStatus(experimentalState, options) {
+  const report = experimentalState;
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalCompact(report));
+    return;
+  }
+  outputText(formatExperimentalLines(report));
+}
+
+async function handleExperimentalDiagnostics(options) {
+  const report = buildExperimentalDiagnosticsReport(process.env);
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalDiagnosticsCompact(report));
+    return;
+  }
+  outputText(formatExperimentalDiagnosticsLines(report));
+}
+
+async function handleExperimentalRegistry(options) {
+  const report = buildExperimentalRegistryReport(process.env);
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatExperimentalRegistryCompact(report));
+    return;
+  }
+  outputText(formatExperimentalRegistryLines(report));
+}
+
+async function handleOverview(program, options) {
+  const report = await buildOverviewReport(program, {
+    baseUrl: options.baseUrl || DEFAULT_BASE_URL,
+    obsidianVaultPath: options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH,
+  });
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+  if (options.compact) {
+    outputText(formatOverviewCompact(report));
+    return;
+  }
+  outputText(formatOverviewLines(report));
 }
 
 function collectReportInfo(kind) {
@@ -1562,6 +2084,7 @@ function collectReportInfo(kind) {
 function formatFollowupLines(reportInfo) {
   const plan = reportInfo.report || {};
   const summary = summarizePlanPlan(plan);
+  const branchOverviewActions = collectBranchOverviewActions(plan.actions);
   const lines = [
     `Latest follow-up report: ${reportInfo.file || "(derived)"}`,
     `Path: ${reportInfo.fullPath || "(derived from bridge artifacts)"}`,
@@ -1592,6 +2115,11 @@ function formatFollowupLines(reportInfo) {
       lines.push(
         `- primary strategy: ${replayPrimary.type || "unknown"} | disposition=${replayPrimary.executionDisposition || "unknown"} | deferred_semantic=${replayPrimary.deferredSemanticCount ?? 0} | deferred_visual=${replayPrimary.deferredVisualCount ?? 0}`
       );
+      if (replayPrimary.visibleActionCounts) {
+        lines.push(
+          `- branch overview fills: ${replayPrimary.visibleActionCounts.rewrite_excerpt || 0}`
+        );
+      }
       if (replayPrimary.summary) {
         lines.push(`- summary: ${replayPrimary.summary}`);
       }
@@ -1604,6 +2132,17 @@ function formatFollowupLines(reportInfo) {
         "- note: the stored follow-up artifact is older than the current planner replay, so this section shows the latest strategy semantics."
       );
     }
+  }
+
+  if (branchOverviewActions.length) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${branchOverviewActions.length}`);
+    branchOverviewActions.slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
   }
 
   if (Object.keys(summary.actionDispositionCounts || {}).length) {
@@ -1690,6 +2229,24 @@ function formatRequestGetResponse(responseInfo, options) {
   return lines.join("\n");
 }
 
+function formatRequestPostResponse(responseInfo, options) {
+  if (options.json) {
+    return responseInfo;
+  }
+  const lines = [
+    `Request: POST ${responseInfo.path}`,
+    `URL: ${responseInfo.url}`,
+    `Status: ${responseInfo.status}`,
+    `Content-Type: ${responseInfo.contentType || "unknown"}`,
+  ];
+  if (responseInfo.body && typeof responseInfo.body === "object") {
+    lines.push(JSON.stringify(responseInfo.body, null, 2));
+  } else if (typeof responseInfo.bodyText === "string") {
+    lines.push(responseInfo.bodyText);
+  }
+  return lines.join("\n");
+}
+
 async function handleReportCommand(kind, options) {
   const info = collectReportInfo(kind);
   if (!info) {
@@ -1744,6 +2301,9 @@ async function handleReportCommand(kind, options) {
           replay ? `replay=${replay.actionCount}` : null,
           replay ? `replay_packs=${replay.strategyPackCount}` : null,
           replayPrimary ? `replay_primary=${replayPrimary.type || "unknown"}` : null,
+          replay
+            ? `replay_overview=${replayPrimary?.visibleActionCounts?.rewrite_excerpt || 0}`
+            : null,
         ]
           .filter(Boolean)
           .join(" ")
@@ -1771,7 +2331,7 @@ async function handleReportCommand(kind, options) {
     }
     if (options.compact) {
       outputText(
-        `apply=${envelope.summary.actionCount} applied=${envelope.summary.appliedCount} skipped=${envelope.summary.skippedCount} mode=${envelope.summary.mode} origin=${envelope.summary.origin || "none"}`
+        `apply=${envelope.summary.actionCount} applied=${envelope.summary.appliedCount} skipped=${envelope.summary.skippedCount} mode=${envelope.summary.mode} origin=${envelope.summary.origin || "none"} overview_fills=${envelope.summary.overviewFillCount || 0}`
       );
       return;
     }
@@ -1889,6 +2449,7 @@ async function handleReplayAfterApply(options) {
     dryRun: true,
     nodes,
   });
+  const summary = summarizePlanPlan(generated.plan);
 
   const payload = {
     ok: true,
@@ -1899,7 +2460,7 @@ async function handleReplayAfterApply(options) {
       report: applyInfo.report,
     },
     generated,
-    summary: summarizePlanPlan(generated.plan),
+    summary,
   };
 
   if (options.json) {
@@ -1909,7 +2470,7 @@ async function handleReplayAfterApply(options) {
 
   if (options.compact) {
     outputText(
-      `apply=${applyInfo.file} actions=${generated.plan.actions.length} warnings=${generated.plan.notes.length} unsupported=${generated.plan.unsupportedActions.length} origin=${applyInfo.report?.origin || "none"}`
+      `apply=${applyInfo.file} actions=${summary.actionCount} warnings=${summary.warningCount} unsupported=${summary.unsupportedCount} packs=${summary.strategyPackCount} overview=${summary.branchOverviewActionCount} origin=${applyInfo.report?.origin || "none"}`
     );
     return;
   }
@@ -1920,10 +2481,27 @@ async function handleReplayAfterApply(options) {
     `Command: ${applyInfo.report?.command || applyInfo.report?.objective || "(unknown)"}`,
     `Mode: ${applyInfo.report?.origin === "native_ai_breakdown" ? "breakdown" : "primary"}`,
     `Origin: ${applyInfo.report?.origin || "(none)"}`,
-    `After-apply replay actions: ${generated.plan.actions.length}`,
-    `Warnings: ${generated.plan.notes.length}`,
-    `Unsupported: ${generated.plan.unsupportedActions.length}`,
+    `After-apply replay actions: ${summary.actionCount}`,
+    `Warnings: ${summary.warningCount}`,
+    `Unsupported: ${summary.unsupportedCount}`,
+    `Strategy packs: ${summary.strategyPackCount}`,
   ];
+  if (summary.primaryStrategyPack) {
+    const primary = summary.primaryStrategyPack;
+    lines.push(
+      `Primary strategy: ${primary.type || "unknown"} | stage=${primary.stage || "unknown"} | disposition=${primary.executionDisposition || "unknown"} | deferred_semantic=${primary.deferredSemanticCount ?? 0} | deferred_visual=${primary.deferredVisualCount ?? 0}`
+    );
+  }
+  if (summary.branchOverviewActionCount) {
+    lines.push("", "Branch overview actions:");
+    lines.push(`- count: ${summary.branchOverviewActionCount}`);
+    collectBranchOverviewActions(generated.plan.actions || []).slice(0, 10).forEach((action) => {
+      const overviewText = compactText(action.text || "").slice(0, 80);
+      lines.push(
+        `- ${action.noteId} | phase=${action.phase || "unknown"} | source=${action.meta?.source || "unknown"} | confidence=${typeof action.meta?.confidence === "number" ? action.meta.confidence : "unknown"}${overviewText ? ` | overview=${overviewText}` : ""}`
+      );
+    });
+  }
   if (generated.plan.actions.length) {
     lines.push("", "Preview:");
   }
@@ -1977,6 +2555,64 @@ async function handleRequestGet(pathname, options) {
   }
 }
 
+async function handleRequestPost(pathname, options) {
+  const baseUrl = (options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const cleanPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${baseUrl}${cleanPath}`;
+  const rawBody =
+    typeof options.body === "string"
+      ? options.body
+      : options.bodyFile || options.body_file || options["body-file"]
+        ? safeRead(options.bodyFile || options.body_file || options["body-file"])
+        : "";
+  let parsedBody = null;
+  if (rawBody.trim()) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch (error) {
+      parsedBody = null;
+    }
+  }
+  const requestBody = parsedBody && typeof parsedBody === "object" ? parsedBody : rawBody || {};
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Accept: "application/json, text/plain;q=0.9, */*;q=0.1",
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify(requestBody),
+  });
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  let body = null;
+  if (contentType.includes("application/json")) {
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch (error) {
+      body = null;
+    }
+  }
+  const responseInfo = {
+    ok: response.ok,
+    method: "POST",
+    path: cleanPath,
+    url,
+    status: response.status,
+    contentType,
+    body: body || null,
+    bodyText: body ? null : text,
+    requestBody,
+  };
+  if (options.json) {
+    outputJson(responseInfo);
+  } else {
+    outputText(formatRequestPostResponse(responseInfo, options));
+  }
+  if (!response.ok) {
+    process.exitCode = 1;
+  }
+}
+
 async function handleBreakdownSmoke(argv, options) {
   const args = [];
   if (options.json) args.push("--json");
@@ -2005,6 +2641,7 @@ async function handleBreakdownPostprocess(options) {
   if (options.inputPath) args.push("--input", options.inputPath);
   if (options.json) args.push("--json");
   if (options.compact) args.push("--compact");
+  if (options.liveOnly) args.push("--live-only");
   if (options.help) args.push("--help");
   const result = spawnSync(process.execPath, [BREAKDOWN_POSTPROCESS_SCRIPT, ...args], {
     encoding: "utf8",
@@ -2181,6 +2818,7 @@ async function handleBridgeLogs(options) {
 
 function createProgram() {
   const program = new Command();
+  const experimentalState = buildExperimentalState(process.env);
   program.name("mnaipro");
   program.description("Local MarginNote agent CLI for bridge status, reports, replay, and smoke checks.");
   program.option("--base-url <url>", "bridge base URL", DEFAULT_BASE_URL);
@@ -2232,8 +2870,9 @@ function createProgram() {
           ? report.latestFollowupApply.requestId || "unknown"
           : "none";
         const supervisorState = report.supervisorState || null;
+        const modelBackendState = report.modelBackend || null;
         outputText(
-          `bridge=${report.checks.bridgeReachable ? "live" : "offline"} hint=${report.statusHint || "unknown"} diagnostic=${report.checks.diagnosticAvailable ? "yes" : "no"} launch_agent=${report.launchAgent.plistExists ? "yes" : "no"} followup_apply=${report.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} breakdown=${report.breakdownArtifacts ? report.breakdownArtifacts.status || "unknown" : "unknown"} next=${report.breakdownNextCommand || "unknown"} obsidian_settings=${report.obsidianSyncSettings && report.obsidianSyncSettings.exists ? "present" : "missing"} missing=${report.missing.length}`
+          `bridge=${report.checks.bridgeReachable ? "live" : "offline"} hint=${report.statusHint || "unknown"} diagnostic=${report.checks.diagnosticAvailable ? "yes" : "no"} launch_agent=${report.launchAgent.plistExists ? "yes" : "no"} followup_apply=${report.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${report.breakdownArtifacts ? report.breakdownArtifacts.status || "unknown" : "unknown"} next=${report.breakdownNextCommand || "unknown"} obsidian_settings=${report.obsidianSyncSettings && report.obsidianSyncSettings.exists ? "present" : "missing"} missing=${report.missing.length}`
         );
         return;
       }
@@ -2251,6 +2890,65 @@ function createProgram() {
         compact: !!cmd.compact || !!program.opts().compact,
       });
     });
+
+  program
+    .command("overview")
+    .description("Render a top-level workflow overview across status, doctor, capabilities, and Breakdown evidence.")
+    .option("--base-url <url>", "bridge base URL")
+    .option(
+      "--obsidian-vault-path <path>",
+      "Obsidian vault root used for sync settings evidence"
+    )
+    .option("--json", "emit JSON output")
+    .option("--compact", "emit a compact single-line summary")
+    .action(async (cmd) => {
+      await handleOverview(program, {
+        baseUrl: cmd.baseUrl || program.opts().baseUrl,
+        obsidianVaultPath: cmd.obsidianVaultPath || program.opts().obsidianVaultPath,
+        json: !!cmd.json || !!program.opts().json,
+        compact: !!cmd.compact || !!program.opts().compact,
+      });
+    });
+
+  if (experimentalState.enabled) {
+    const experimental = new Command("experimental").description(
+      "Opt-in experimental and private command surfaces."
+    );
+    experimental
+      .command("status")
+      .description("Inspect the current experimental gate state.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalStatus(experimentalState, {
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    experimental
+      .command("diagnostics")
+      .description("Inspect the latest experimental/runtime diagnostic evidence.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalDiagnostics({
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    experimental
+      .command("registry")
+      .description("Inspect the available gated experimental command registry.")
+      .option("--json", "emit JSON output")
+      .option("--compact", "emit a compact single-line summary")
+      .action(async (cmd) => {
+        await handleExperimentalRegistry({
+          json: !!cmd.json || !!program.opts().json,
+          compact: !!cmd.compact || !!program.opts().compact,
+        });
+      });
+    program.addCommand(experimental);
+  }
 
   const bridge = new Command("bridge").description(
     "Bridge lifecycle commands for deploy, status, and local health checks."
@@ -2489,11 +3187,13 @@ function createProgram() {
     .option("--input <path>", "inspect a specific branch snapshot or apply report")
     .option("--json", "emit JSON output")
     .option("--compact", "emit a compact single-line summary")
+    .option("--live-only", "skip the apply-report proxy fallback and require dedicated Breakdown artifacts")
     .action(async (inputPath, cmd) => {
       await handleBreakdownPostprocess({
         inputPath: cmd.input || inputPath || "",
         json: !!cmd.json || !!program.opts().json,
         compact: !!cmd.compact || !!program.opts().compact,
+        liveOnly: !!cmd.liveOnly,
         help: !!cmd.help,
       });
     });
@@ -2519,15 +3219,33 @@ function createProgram() {
     .option("--base-url <url>", "bridge base URL")
     .option("--json", "emit JSON output")
     .action(async (pathname, cmd) => {
+      const options = typeof cmd.opts === "function" ? cmd.opts() : cmd || {};
       await handleRequestGet(pathname, {
-        baseUrl: cmd.baseUrl || program.opts().baseUrl,
-        json: !!cmd.json || !!program.opts().json,
+        baseUrl: options.baseUrl || program.opts().baseUrl,
+        json: !!options.json || !!program.opts().json,
+      });
+    });
+  request
+    .command("post")
+    .description("POST a raw bridge path with a JSON body.")
+    .argument("<path>", "bridge path, such as /model/run or /model/replay")
+    .option("--base-url <url>", "bridge base URL")
+    .option("--body <json>", "JSON body to send")
+    .option("--body-file <path>", "read the JSON body from a file")
+    .option("--json", "emit JSON output")
+    .action(async (pathname, cmd) => {
+      const options = typeof cmd.opts === "function" ? cmd.opts() : cmd || {};
+      await handleRequestPost(pathname, {
+        baseUrl: options.baseUrl || program.opts().baseUrl,
+        body: options.body || "",
+        bodyFile: options.bodyFile || options.body_file || options["body-file"] || "",
+        json: !!options.json || !!program.opts().json,
       });
     });
   program.addCommand(request);
 
   program.addHelpText("afterAll", ({ command }) =>
-    command === program ? topLevelHelpFooter() : ""
+    command === program ? topLevelHelpFooter(experimentalState) : ""
   );
   bridge.addHelpText("afterAll", ({ command }) => (command === bridge ? bridgeHelpFooter() : ""));
 
@@ -2559,6 +3277,7 @@ module.exports = {
   handleReplayLatest,
   handleReplayAfterApply,
   handleRequestGet,
+  handleRequestPost,
   handleBreakdownSmoke,
   handleBreakdownArtifacts,
   summarizePlanPlan,

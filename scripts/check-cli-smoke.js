@@ -30,6 +30,41 @@ function resolveExistingSiblingDir(candidates) {
   return path.resolve(ROOT_DIR, '..', candidates[candidates.length - 1]);
 }
 
+function isTruthyEnv(value) {
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
+function determineSmokeMode(options) {
+  const marginnoteCliRoot = path.resolve(options.marginnoteCliRoot);
+  const bridgeRoot = path.resolve(options.bridgeRoot);
+  const siblingRootsAvailable = fs.existsSync(marginnoteCliRoot) && fs.existsSync(bridgeRoot);
+  const ciEnvironment = isTruthyEnv(process.env.CI) || isTruthyEnv(process.env.GITHUB_ACTIONS);
+  const forcedPortable = !!options.portable;
+  const missingRoots = [];
+
+  if (!fs.existsSync(marginnoteCliRoot)) {
+    missingRoots.push(`marginnote-cli: ${marginnoteCliRoot}`);
+  }
+  if (!fs.existsSync(bridgeRoot)) {
+    missingRoots.push(`mn-obsidian-bridge: ${bridgeRoot}`);
+  }
+
+  return {
+    portable: forcedPortable || ciEnvironment || missingRoots.length > 0,
+    reason: [
+      forcedPortable ? 'forced by --portable' : null,
+      ciEnvironment ? 'running under CI' : null,
+      missingRoots.length > 0 ? `missing sibling checkouts (${missingRoots.join(', ')})` : null,
+    ]
+      .filter(Boolean)
+      .join('; '),
+    siblingRootsAvailable,
+    missingRoots,
+    ciEnvironment,
+    forcedPortable,
+  };
+}
+
 function parseArgs(argv) {
   const options = {
     output: 'pretty',
@@ -37,6 +72,7 @@ function parseArgs(argv) {
     bridgeRoot: process.env.MN_OBSIDIAN_BRIDGE_ROOT || DEFAULT_BRIDGE_ROOT,
     vaultPath: process.env.MN_OBSIDIAN_VAULT_PATH || DEFAULT_VAULT_PATH,
     exportRoot: process.env.MN_OBSIDIAN_EXPORT_ROOT || DEFAULT_EXPORT_ROOT,
+    portable: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -85,12 +121,36 @@ function parseArgs(argv) {
       options.exportRoot = arg.slice('--export-root='.length);
       continue;
     }
+    if (arg === '--portable') {
+      options.portable = true;
+      continue;
+    }
     if (arg === '--help' || arg === '-h') {
       options.help = true;
     }
   }
 
   return options;
+}
+
+function renderHelp() {
+  return [
+    'Usage: node scripts/check-cli-smoke.js [--json|--compact] [--portable]',
+    '',
+    'Options:',
+    '  --json                  Emit structured JSON output.',
+    '  --compact               Emit a one-line summary.',
+    '  --portable              Force portable mode and skip sibling CLI coverage.',
+    '  --marginnote-cli-root   Override the sibling marginnote-cli checkout path.',
+    '  --bridge-root           Override the sibling mn-obsidian-bridge checkout path.',
+    '  --vault-path            Override the Obsidian vault path used for smoke fixtures.',
+    '  --export-root           Override the export root used for smoke fixtures.',
+    '  -h, --help              Show this help text.',
+    '',
+    'Mode selection:',
+    '  Portable mode is enabled automatically in CI or when sibling checkouts are absent.',
+    '  The local cross-repo sweep still runs when both sibling repos are available.',
+  ].join('\n');
 }
 
 function cliScript(root, preferredRelatives) {
@@ -133,6 +193,20 @@ function runCommand(label, scriptPath, args = [], extraEnv = {}) {
     stdout,
     stderr,
   };
+}
+
+function collapseWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function renderSurfaceSectionLine(section) {
+  const commands = Array.isArray(section && section.commands) ? section.commands.join(' | ') : '';
+  return `${section && section.label ? section.label : ''}: ${section && section.prefix ? section.prefix : ''} ${commands}`.trim();
+}
+
+function renderSurfaceDiscoveryLine(surfaceDocs) {
+  const discovery = surfaceDocs && surfaceDocs.discovery ? surfaceDocs.discovery : {};
+  return `${discovery.label || 'Discovery'}: ${discovery.command || ''}`.trim();
 }
 
 function deleteDefaultsDomain(domain) {
@@ -266,17 +340,24 @@ function createTemporaryBreakdownArtifacts(rootDir) {
     unsupportedActions: [],
     strategyPacks: [{ type: 'visual_branch_strategy' }],
   });
-  writeTempJsonFile(reportsDir, `mnaipro-${requestId}-followup-apply-5000000000101.json`, {
-    origin: 'native_ai_breakdown',
-    command: '整理 AI Breakdown 分支',
-    objective: '整理 AI Breakdown 分支',
-    rootNoteId: 'bd-root',
-    actionCount: 1,
-    results: [{ ok: true, type: 'rewrite_excerpt', noteId: 'bd-root' }],
-    afterBranch: {
-      notes: sampleBreakdownNodes(),
-    },
-  });
+    writeTempJsonFile(reportsDir, `mnaipro-${requestId}-followup-apply-5000000000101.json`, {
+      origin: 'native_ai_breakdown',
+      command: '整理 AI Breakdown 分支',
+      objective: '整理 AI Breakdown 分支',
+      rootNoteId: 'bd-root',
+      actionCount: 1,
+      results: [
+        {
+          ok: true,
+          type: 'rewrite_excerpt',
+          noteId: 'bd-root',
+          planSource: 'branch_structure_digest',
+        },
+      ],
+      afterBranch: {
+        notes: sampleBreakdownNodes(),
+      },
+    });
 
   return {
     root: artifactRoot,
@@ -530,6 +611,7 @@ function summarizeBridgeSettings(report) {
 function renderText(report) {
   const lines = [
     `CLI smoke test ${report.ok ? 'passed' : 'failed'}`,
+    `Mode: ${report.mode || 'full'}`,
     `MarginNote CLI root: ${report.roots.marginnoteCliRoot}`,
     `Bridge root: ${report.roots.bridgeRoot}`,
     `Vault path: ${report.roots.vaultPath}`,
@@ -545,6 +627,18 @@ function renderText(report) {
     lines.push(`- ${command.label}: ${command.kind || '(unknown)'}`);
     if (command.summary) {
       lines.push(`  ${command.summary}`);
+    }
+  }
+  if (report.warnings && report.warnings.length) {
+    lines.push('', 'Warnings:');
+    for (const warning of report.warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
+  if (report.skipped && report.skipped.length) {
+    lines.push('', 'Skipped:');
+    for (const skipped of report.skipped) {
+      lines.push(`- ${skipped.surface}: ${skipped.reason}`);
     }
   }
   if (report.doctorSettings) {
@@ -572,9 +666,13 @@ function renderText(report) {
 function renderCompact(report) {
   const parts = [
     `ok=${report.ok ? 'yes' : 'no'}`,
+    `mode=${report.mode || 'full'}`,
     `checks=${report.checks.length}`,
     `commands=${report.commands.length}`,
   ];
+  if (report.skipped && report.skipped.length) {
+    parts.push(`skipped=${report.skipped.length}`);
+  }
   if (!report.ok && report.error) {
     parts.push(`error=${report.error.replace(/\s+/g, ' ').trim()}`);
   }
@@ -583,8 +681,15 @@ function renderCompact(report) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    process.stdout.write(`${renderHelp()}\n`);
+    return;
+  }
+  const smokeMode = determineSmokeMode(options);
+  const portableMode = smokeMode.portable;
   const report = {
     ok: false,
+    mode: portableMode ? 'portable' : 'full',
     generatedAt: new Date().toISOString(),
     roots: {
       marginnoteCliRoot: path.resolve(options.marginnoteCliRoot),
@@ -594,11 +699,37 @@ async function main() {
     },
     commands: [],
     checks: [],
+    warnings: [],
+    skipped: [],
+    coverage: {
+      portable: portableMode,
+      siblingRootsAvailable: smokeMode.siblingRootsAvailable,
+      reason: smokeMode.reason,
+      missingRoots: smokeMode.missingRoots,
+    },
     bridgeSettings: null,
   };
 
   let temporaryBridge = null;
   const temporaryWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'mnaipro-cli-smoke-'));
+  if (portableMode) {
+    const portableVault = createTemporaryVault(temporaryWorkspace, {
+      marginNoteSourcePath: path.join(temporaryWorkspace, 'margin-note-source'),
+      pdfVaultFolder: 'MarginNote PDFs',
+      canvasFolderName: 'MarginNote Canvases',
+      autoLinkPdfsOnScan: true,
+      autoGenerateCanvasesOnScan: false,
+    });
+    report.roots.vaultPath = portableVault.vaultPath;
+    report.roots.exportRoot = fs.mkdtempSync(path.join(temporaryWorkspace, 'export-root-'));
+    report.warnings.push(
+      smokeMode.reason || 'portable mode enabled for CLI smoke'
+    );
+    report.skipped.push({
+      surface: 'sibling-cli-coverage',
+      reason: smokeMode.reason || 'portable mode enabled for CLI smoke',
+    });
+  }
   const temporaryPreferenceDomains = {
     set: `com.codex.mnaipro.cli-smoke.${process.pid}.${Date.now()}.set`,
     patch: `com.codex.mnaipro.cli-smoke.${process.pid}.${Date.now()}.patch`,
@@ -634,12 +765,19 @@ async function main() {
     const bridgeCli = cliScript(report.roots.bridgeRoot, ['bin/mn-obsidian-bridge.js', 'src/cli.js']);
     const mnaiproCli = cliScript(ROOT_DIR, ['bin/mnaipro.js', 'cli/mnaipro.js']);
 
-    ensure(report, 'marginnote-cli root exists', fs.existsSync(report.roots.marginnoteCliRoot), {
-      path: report.roots.marginnoteCliRoot,
-    });
-    ensure(report, 'mn-obsidian-bridge root exists', fs.existsSync(report.roots.bridgeRoot), {
-      path: report.roots.bridgeRoot,
-    });
+    if (!portableMode) {
+      ensure(report, 'marginnote-cli root exists', fs.existsSync(report.roots.marginnoteCliRoot), {
+        path: report.roots.marginnoteCliRoot,
+      });
+      ensure(report, 'mn-obsidian-bridge root exists', fs.existsSync(report.roots.bridgeRoot), {
+        path: report.roots.bridgeRoot,
+      });
+    } else {
+      report.skipped.push({
+        surface: 'sibling-cli-root-checks',
+        reason: smokeMode.reason || 'portable mode enabled for CLI smoke',
+      });
+    }
     ensure(report, 'vault path exists', fs.existsSync(report.roots.vaultPath), {
       path: report.roots.vaultPath,
     });
@@ -840,7 +978,7 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities command count exposed',
-      mnaiproCapabilities.commandCount === 19,
+      mnaiproCapabilities.commandCount === 21,
       {
         commandCount: mnaiproCapabilities.commandCount || 0,
         topLevelCount: mnaiproCapabilities.topLevelCount || 0,
@@ -870,6 +1008,15 @@ async function main() {
         ),
       { registry: mnaiproCapabilities.registry || null }
     );
+    ensure(
+      report,
+      'mnaipro capabilities overview leaf exposed',
+      Array.isArray(mnaiproCapabilities.registry) &&
+        mnaiproCapabilities.registry.some(
+          (entry) => entry && entry.path === 'overview' && entry.kind === 'command'
+        ),
+      { registry: mnaiproCapabilities.registry || null }
+    );
     const mnaiproCapabilitiesCompactResult = runCommand(
       'mnaipro capabilities --compact',
       mnaiproCli,
@@ -878,10 +1025,121 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities compact exposes summary',
-      /commands=19/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+      /commands=21/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
         /groups=8/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
-        /topLevel=11/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
+        /topLevel=12/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
       { stdout: mnaiproCapabilitiesCompactResult.stdout || '' }
+    );
+
+    const mnaiproHelpResult = runCommand('mnaipro --help', mnaiproCli, ['--help']);
+    ensure(
+      report,
+      'mnaipro capabilities surface docs exposed',
+      mnaiproCapabilities.surfaceDocs &&
+        Array.isArray(mnaiproCapabilities.surfaceDocs.sections) &&
+        mnaiproCapabilities.surfaceDocs.sections.length > 0 &&
+        Array.isArray(mnaiproCapabilities.surfaceDocs.commonFlows) &&
+        mnaiproCapabilities.surfaceDocs.commonFlows.length > 0 &&
+        mnaiproCapabilities.surfaceDocs.discovery &&
+        typeof mnaiproCapabilities.surfaceDocs.discovery.command === 'string',
+      { surfaceDocs: mnaiproCapabilities.surfaceDocs || null }
+    );
+    ensure(
+      report,
+      'mnaipro help shares surface docs with capabilities',
+      collapseWhitespace(mnaiproHelpResult.stdout || '').includes('Command groups:') &&
+        collapseWhitespace(mnaiproHelpResult.stdout || '').includes('Common flows:') &&
+        mnaiproCapabilities.surfaceDocs.sections.every((section) =>
+          collapseWhitespace(mnaiproHelpResult.stdout || '').includes(
+            collapseWhitespace(renderSurfaceSectionLine(section))
+          )
+        ) &&
+        collapseWhitespace(mnaiproHelpResult.stdout || '').includes(
+          collapseWhitespace(renderSurfaceDiscoveryLine(mnaiproCapabilities.surfaceDocs))
+        ) &&
+        mnaiproCapabilities.surfaceDocs.commonFlows.every((flow) =>
+          collapseWhitespace(mnaiproHelpResult.stdout || '').includes(collapseWhitespace(flow))
+        ),
+      {
+        stdout: mnaiproHelpResult.stdout || '',
+        surfaceDocs: mnaiproCapabilities.surfaceDocs || null,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro help hides experimental surface by default',
+      !collapseWhitespace(mnaiproHelpResult.stdout || '').includes('mnaipro experimental') &&
+        !(
+          mnaiproCapabilities.surfaceDocs &&
+          Array.isArray(mnaiproCapabilities.surfaceDocs.sections) &&
+          mnaiproCapabilities.surfaceDocs.sections.some((section) => section.label === 'Experimental')
+        ),
+      {
+        stdout: mnaiproHelpResult.stdout || '',
+        surfaceDocs: mnaiproCapabilities.surfaceDocs || null,
+      }
+    );
+
+    const mnaiproOverviewResult = runCommand(
+      'mnaipro overview',
+      mnaiproCli,
+      ['overview', '--json'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    const mnaiproOverview = parseJson('mnaipro overview', mnaiproOverviewResult.stdout);
+    report.commands.push(summarizeCommand(mnaiproOverviewResult, mnaiproOverview));
+    ensure(report, 'mnaipro overview ok', mnaiproOverview.ok === true, { kind: mnaiproOverview.kind });
+    ensure(report, 'mnaipro overview kind exposed', mnaiproOverview.kind === 'overview', {
+      kind: mnaiproOverview.kind,
+    });
+    ensure(
+      report,
+      'mnaipro overview surface counts exposed',
+      mnaiproOverview.surfaceCounts &&
+        typeof mnaiproOverview.surfaceCounts.visible === 'number' &&
+        typeof mnaiproOverview.surfaceCounts.total === 'number' &&
+        mnaiproOverview.surfaceCounts.visible === mnaiproOverview.surfaceCounts.total &&
+        mnaiproOverview.surfaceCounts.total >= 5,
+      { surfaceCounts: mnaiproOverview.surfaceCounts || null }
+    );
+    ensure(
+      report,
+      'mnaipro overview nested reports exposed',
+      mnaiproOverview.status &&
+        mnaiproOverview.doctor &&
+        mnaiproOverview.capabilities &&
+        mnaiproOverview.status.kind === 'status' &&
+        mnaiproOverview.doctor.kind === 'doctor' &&
+        mnaiproOverview.capabilities.kind === 'capabilities',
+      {
+        status: mnaiproOverview.status || null,
+        doctor: mnaiproOverview.doctor || null,
+        capabilities: mnaiproOverview.capabilities || null,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro overview recommended commands exposed',
+      Array.isArray(mnaiproOverview.recommendedCommands) &&
+        mnaiproOverview.recommendedCommands.length > 0 &&
+        mnaiproOverview.recommendedCommands[0] === 'mnaipro doctor --json' &&
+        mnaiproOverview.recommendedCommands.includes('mnaipro capabilities --json'),
+      { recommendedCommands: mnaiproOverview.recommendedCommands || null }
+    );
+    const mnaiproOverviewCompactResult = runCommand(
+      'mnaipro overview --compact',
+      mnaiproCli,
+      ['overview', '--compact']
+    );
+    ensure(
+      report,
+      'mnaipro overview compact exposes summary',
+      /kind=overview/.test(mnaiproOverviewCompactResult.stdout || '') &&
+        /next=mnaipro doctor --json/.test(mnaiproOverviewCompactResult.stdout || ''),
+      { stdout: mnaiproOverviewCompactResult.stdout || '' }
     );
 
     const mnaiproFollowupResult = runCommand(
@@ -918,8 +1176,25 @@ async function main() {
       report,
       'mnaipro followup latest compact replay hint exposed',
       /replay_packs=\d+/.test(mnaiproFollowupCompactResult.stdout || '') &&
-        /replay_primary=/.test(mnaiproFollowupCompactResult.stdout || ''),
+        /replay_primary=/.test(mnaiproFollowupCompactResult.stdout || '') &&
+        /replay_overview=\d+/.test(mnaiproFollowupCompactResult.stdout || ''),
       { stdout: mnaiproFollowupCompactResult.stdout || '' }
+    );
+    const mnaiproFollowupTextResult = runCommand(
+      'mnaipro followup latest',
+      mnaiproCli,
+      ['followup', 'latest'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro followup latest text branch overview exposed',
+      /Branch overview actions:/.test(mnaiproFollowupTextResult.stdout || '') &&
+        /branch overview fills:/.test(mnaiproFollowupTextResult.stdout || ''),
+      { stdout: mnaiproFollowupTextResult.stdout || '' }
     );
 
     const mnaiproFollowupApplyResult = runCommand(
@@ -944,6 +1219,12 @@ async function main() {
     ensure(report, 'mnaipro followup apply latest origin exposed', mnaiproFollowupApply.summary && mnaiproFollowupApply.summary.origin === 'native_ai_breakdown', {
       summary: mnaiproFollowupApply.summary || null
     });
+    ensure(
+      report,
+      'mnaipro followup apply latest overview fills exposed',
+      typeof mnaiproFollowupApply.summary.overviewFillCount === 'number',
+      { summary: mnaiproFollowupApply.summary || null }
+    );
     const mnaiproFollowupApplyCompactResult = runCommand(
       'mnaipro followup apply latest --compact',
       mnaiproCli,
@@ -956,6 +1237,60 @@ async function main() {
     ensure(report, 'mnaipro followup apply latest compact hint exposed', /followup_apply=1/.test(mnaiproFollowupApplyCompactResult.stdout || '') && /mode=breakdown/.test(mnaiproFollowupApplyCompactResult.stdout || ''), {
       stdout: mnaiproFollowupApplyCompactResult.stdout || ''
     });
+    ensure(
+      report,
+      'mnaipro followup apply latest compact overview hint exposed',
+      /overview_fills=\d+/.test(mnaiproFollowupApplyCompactResult.stdout || ''),
+      { stdout: mnaiproFollowupApplyCompactResult.stdout || '' }
+    );
+    const mnaiproFollowupApplyTextResult = runCommand(
+      'mnaipro followup apply latest',
+      mnaiproCli,
+      ['followup', 'apply', 'latest'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro followup apply latest text branch overview exposed',
+      /Branch overview fills:/.test(mnaiproFollowupApplyTextResult.stdout || ''),
+      { stdout: mnaiproFollowupApplyTextResult.stdout || '' }
+    );
+
+    const mnaiproReplayAfterApplyResult = runCommand(
+      'mnaipro replay after-apply',
+      mnaiproCli,
+      ['replay', 'after-apply'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro replay after-apply text strategy pack summary exposed',
+      /Strategy packs:/.test(mnaiproReplayAfterApplyResult.stdout || '') &&
+        /Branch overview actions:/.test(mnaiproReplayAfterApplyResult.stdout || ''),
+      { stdout: mnaiproReplayAfterApplyResult.stdout || '' }
+    );
+    const mnaiproReplayAfterApplyCompactResult = runCommand(
+      'mnaipro replay after-apply --compact',
+      mnaiproCli,
+      ['replay', 'after-apply', '--compact'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro replay after-apply compact strategy pack summary exposed',
+      /packs=\d+/.test(mnaiproReplayAfterApplyCompactResult.stdout || '') &&
+        /overview=\d+/.test(mnaiproReplayAfterApplyCompactResult.stdout || ''),
+      { stdout: mnaiproReplayAfterApplyCompactResult.stdout || '' }
+    );
 
     const mnaiproBreakdownArtifactsResult = runCommand(
       'mnaipro breakdown artifacts',
@@ -1306,6 +1641,7 @@ async function main() {
       { obsidianSyncSettings: bridgeStatusScript.obsidianSyncSettings || null }
     );
 
+    if (!portableMode) {
     const margDoctorResult = runCommand(
       'marginnote-cli doctor',
       marginnoteCli,
@@ -1385,6 +1721,19 @@ async function main() {
       { chatMemories: appInventory.paths ? appInventory.paths.chatMemories : null }
     );
 
+    const margHelpResult = runCommand('marginnote-cli --help', marginnoteCli, ['--help']);
+    report.commands.push(summarizeCommand(margHelpResult, {
+      ok: true,
+      kind: 'help',
+      title: 'marginnote-cli help',
+    }));
+    ensure(
+      report,
+      'marginnote-cli help overview command exposed',
+      /marginnote-cli overview/.test(margHelpResult.stdout || ''),
+      { stdout: margHelpResult.stdout || '' }
+    );
+
     const margCapabilitiesResult = runCommand(
       'marginnote-cli capabilities',
       marginnoteCli,
@@ -1401,13 +1750,94 @@ async function main() {
     );
     ensure(
       report,
+      'marginnote-cli capabilities overview leaf exposed',
+      Array.isArray(margCapabilities.registry) &&
+        margCapabilities.registry.some((entry) => entry && entry.command === 'marginnote-cli overview'),
+      { registry: margCapabilities.registry || null }
+    );
+    ensure(
+      report,
+      'marginnote-cli capabilities surface docs exposed',
+      margCapabilities.surfaceDocs &&
+        Array.isArray(margCapabilities.surfaceDocs.sections) &&
+        margCapabilities.surfaceDocs.sections.length >= 4 &&
+        margCapabilities.surfaceDocs.discovery &&
+        typeof margCapabilities.surfaceDocs.discovery.command === 'string' &&
+        Array.isArray(margCapabilities.surfaceDocs.commonFlows) &&
+        margCapabilities.surfaceDocs.commonFlows.length >= 4,
+      { surfaceDocs: margCapabilities.surfaceDocs || null }
+    );
+    ensure(
+      report,
       'marginnote-cli capabilities groups exposed',
       Array.isArray(margCapabilities.groups) && margCapabilities.groups.length > 0,
       { groupCount: margCapabilities.groupCount || 0 }
     );
-    ensure(report, 'marginnote-cli capabilities command count', margCapabilities.commandCount === 23, {
+    ensure(report, 'marginnote-cli capabilities command count', margCapabilities.commandCount === 24, {
       commandCount: margCapabilities.commandCount || 0,
     });
+
+    const margOverviewResult = runCommand(
+      'marginnote-cli overview',
+      marginnoteCli,
+      ['overview', '--json']
+    );
+    const margOverview = parseJson('marginnote-cli overview', margOverviewResult.stdout);
+    report.commands.push(summarizeCommand(margOverviewResult, margOverview));
+    ensure(report, 'marginnote-cli overview ok', margOverview.ok === true, { kind: margOverview.kind });
+    ensure(report, 'marginnote-cli overview kind exposed', margOverview.kind === 'overview', {
+      kind: margOverview.kind,
+    });
+    ensure(
+      report,
+      'marginnote-cli overview surface counts exposed',
+      margOverview.surfaceCounts &&
+        typeof margOverview.surfaceCounts.visible === 'number' &&
+        typeof margOverview.surfaceCounts.total === 'number' &&
+        margOverview.surfaceCounts.visible === margOverview.surfaceCounts.total &&
+        margOverview.surfaceCounts.total >= 4,
+      { surfaceCounts: margOverview.surfaceCounts || null }
+    );
+    ensure(
+      report,
+      'marginnote-cli overview nested reports exposed',
+      margOverview.status &&
+        margOverview.doctor &&
+        margOverview.aiOverview &&
+        margOverview.capabilities &&
+        margOverview.status.kind === 'app_inspect' &&
+        margOverview.doctor.kind === 'doctor' &&
+        margOverview.aiOverview.kind === 'ai_overview' &&
+        margOverview.capabilities.kind === 'capabilities',
+      {
+        status: margOverview.status || null,
+        doctor: margOverview.doctor || null,
+        aiOverview: margOverview.aiOverview || null,
+        capabilities: margOverview.capabilities || null,
+      }
+    );
+    ensure(
+      report,
+      'marginnote-cli overview recommended commands exposed',
+      Array.isArray(margOverview.recommendedCommands) &&
+        margOverview.recommendedCommands.length > 0 &&
+        margOverview.recommendedCommands[0] === 'marginnote-cli doctor --json' &&
+        margOverview.recommendedCommands.includes('marginnote-cli ai overview --json'),
+      { recommendedCommands: margOverview.recommendedCommands || null }
+    );
+    const margOverviewCompactResult = runCommand(
+      'marginnote-cli overview --compact',
+      marginnoteCli,
+      ['overview', '--compact']
+    );
+    ensure(
+      report,
+      'marginnote-cli overview compact exposes summary',
+      /ok=yes/.test(margOverviewCompactResult.stdout || '') &&
+        /kind=overview/.test(margOverviewCompactResult.stdout || '') &&
+        /next=marginnote-cli doctor --json/.test(margOverviewCompactResult.stdout || ''),
+      { stdout: margOverviewCompactResult.stdout || '' }
+    );
 
     const aiStatusResult = runCommand(
       'marginnote-cli ai status',
@@ -2494,6 +2924,18 @@ async function main() {
     ensure(report, 'mn-obsidian-bridge capabilities command count', bridgeCapabilities.commandCount === 18, {
       commandCount: bridgeCapabilities.commandCount || 0,
     });
+    ensure(
+      report,
+      'mn-obsidian-bridge capabilities surface docs exposed',
+      bridgeCapabilities.surfaceDocs &&
+        Array.isArray(bridgeCapabilities.surfaceDocs.sections) &&
+        bridgeCapabilities.surfaceDocs.sections.length >= 4 &&
+        bridgeCapabilities.surfaceDocs.discovery &&
+        typeof bridgeCapabilities.surfaceDocs.discovery.command === 'string' &&
+        Array.isArray(bridgeCapabilities.surfaceDocs.commonFlows) &&
+        bridgeCapabilities.surfaceDocs.commonFlows.length >= 4,
+      { surfaceDocs: bridgeCapabilities.surfaceDocs || null }
+    );
 
     const obSettingsResult = runCommand(
       'mn-obsidian-bridge ob settings',
@@ -3073,6 +3515,7 @@ async function main() {
     report.commands.push(summarizeCommand(readResult, readReport));
     ensure(report, 'mn-obsidian-bridge read ok', readReport.ok === true, { kind: readReport.kind });
     ensure(report, 'mn-obsidian-bridge read directory', readReport.type === 'directory', { type: readReport.type });
+    }
 
     report.ok = true;
     if (options.output === 'json') {
