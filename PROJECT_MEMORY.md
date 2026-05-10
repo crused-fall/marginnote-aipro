@@ -43,6 +43,7 @@ Canonical long-term memory for this repository.
 - `scripts/check-cli-smoke-portable.js` is the focused regression for missing sibling checkouts in portable smoke mode.
 - `npm run cli:smoke:portable` is the explicit local entrypoint for the CI-safe portable smoke mode, and `scripts/check-cli-smoke.js --help` documents the portable fallback and root override flags.
 - Tagged releases should be summarized in `CHANGELOG.md` so release notes stay easy to scan without mining commit history.
+- `scripts/check-release-addon-workflow.js` now also asserts that `CHANGELOG.md` has an `Unreleased` section and that the release docs point at it, so the release-note entrypoint stays coupled to the workflow check.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
 - Release packaging should produce the `.mnaddon` archive outside version control, with git keeping source only.
 - The `release-addon` workflow now runs `npm run check:ci` before building, uploads the built archive as a workflow artifact on every run, and attaches it to a GitHub Release when the run is triggered by a `v*` tag; the smoke gate is portable by construction and the broader local cross-repo sweep remains available through `npm run check`.
