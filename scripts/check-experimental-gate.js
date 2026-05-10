@@ -225,12 +225,29 @@ function main() {
     true,
     "enabled diagnostics should include the enabled gate state"
   );
-  assert(
-    enabledDiagnosticsJson.latestDiagnostic &&
-      (enabledDiagnosticsJson.latestDiagnostic.kind === "runtime_snapshot" ||
-        enabledDiagnosticsJson.latestDiagnostic.kind === "derived_diagnostic"),
-    "enabled diagnostics should expose the latest diagnostic evidence"
-  );
+  if (enabledDiagnosticsJson.latestDiagnostic) {
+    assert(
+      enabledDiagnosticsJson.latestDiagnostic.kind === "runtime_snapshot" ||
+        enabledDiagnosticsJson.latestDiagnostic.kind === "derived_diagnostic",
+      "enabled diagnostics should expose a known diagnostic evidence kind"
+    );
+  } else {
+    assert(
+      Array.isArray(enabledDiagnosticsJson.warnings) &&
+        enabledDiagnosticsJson.warnings.includes("diagnostic_missing"),
+      "enabled diagnostics should warn when no diagnostic artifact exists"
+    );
+    assert(
+      enabledDiagnosticsJson.summary &&
+        String(enabledDiagnosticsJson.summary).includes("No diagnostic artifacts found"),
+      "enabled diagnostics should explain the missing diagnostic fallback"
+    );
+    assert.strictEqual(
+      enabledDiagnosticsJson.nextCommand,
+      "mnaipro doctor --json",
+      "enabled diagnostics should point to doctor when no diagnostic artifact exists"
+    );
+  }
 
   process.stdout.write("Experimental gate checks OK\n");
 }
