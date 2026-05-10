@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-11
 
 ## Current phase
 - Bridge model-backend slice complete and locally verified.
@@ -11,6 +11,7 @@ Last updated: 2026-05-08
 - `scripts/check-ci.js` is now itself guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
 - `scripts/check-cli-smoke-portable.js` now guards the missing-sibling-root portable smoke path directly.
 - `npm run cli:smoke:portable` now exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
+- PR #4 is now open and marked ready for review, so the next step for that slice is review follow-up rather than more feature work on the same branch.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.
@@ -36,6 +37,7 @@ Last updated: 2026-05-08
 - The standalone `marginnote-cli capabilities` command now also exposes a shared `surfaceDocs` catalog, and its help footer reads from the same command-surface source of truth.
 - The standalone `mn-obsidian-bridge capabilities` command now exposes a shared `surfaceDocs` catalog, and the bridge help footer reads from the same command-surface source of truth.
 - The bridge now has a provider-agnostic model backend with `/model/run`, `/model/replay`, and `/model/latest` endpoints, dry-run default behavior, persisted request/response/trace artifacts, and raw CLI passthrough for inspection and replay.
+- A lightweight `CHANGELOG.md` is now part of the release-hardening surface so tagged releases can summarize user-visible changes without digging through commit history.
 - `mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, keeping replay output aligned with the live follow-up vocabulary.
 - `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` now surface model-backend readiness and latest execution evidence alongside the existing Breakdown and bridge health signals.
 - `mnaipro request get|post` now advertises the provider-agnostic model backend routes, including preview `/model/run`, replay `/model/replay`, and latest-trace `/model/latest`.
