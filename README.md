@@ -445,6 +445,7 @@ The generated `.mnaddon` archive is a local build artifact and is ignored by git
 When you push a `v*` tag, the GitHub release workflow first runs `npm run check:ci`, then builds the same archive, uploads it as a workflow artifact, and attaches it to the GitHub Release asset.
 You can also trigger that workflow manually from the Actions tab to produce a fresh package without publishing a tag.
 Release notes now live in `CHANGELOG.md`; update that file when you want the next tag to summarize user-visible changes.
+See `docs/release-process.md` for the exact release path and validation steps.
 
 ## Local bridge diagnostics API
 

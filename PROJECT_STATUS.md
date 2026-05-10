@@ -13,6 +13,7 @@ Last updated: 2026-05-11
 - `npm run cli:smoke:portable` now exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
 - PR #4 is now open and marked ready for review, so the next step for that slice is review follow-up rather than more feature work on the same branch.
 - The pull request template now prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
+- `docs/release-process.md` now exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.

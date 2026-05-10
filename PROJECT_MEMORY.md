@@ -45,6 +45,7 @@ Canonical long-term memory for this repository.
 - Tagged releases should be summarized in `CHANGELOG.md` so release notes stay easy to scan without mining commit history.
 - `scripts/check-release-addon-workflow.js` now also asserts that `CHANGELOG.md` has an `Unreleased` section and that the release docs point at it, so the release-note entrypoint stays coupled to the workflow check.
 - The pull request template now prompts contributors to update `CHANGELOG.md` when user-visible behavior changes, keeping release notes and review checklists aligned.
+- `docs/release-process.md` now captures the canonical release checklist and publish paths, and the release workflow check asserts that it keeps the changelog, validation commands, and publish triggers in sync.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
 - Release packaging should produce the `.mnaddon` archive outside version control, with git keeping source only.
 - The `release-addon` workflow now runs `npm run check:ci` before building, uploads the built archive as a workflow artifact on every run, and attaches it to a GitHub Release when the run is triggered by a `v*` tag; the smoke gate is portable by construction and the broader local cross-repo sweep remains available through `npm run check`.
