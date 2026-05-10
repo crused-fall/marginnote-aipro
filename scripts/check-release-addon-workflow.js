@@ -4,12 +4,14 @@ const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const WORKFLOW_PATH = path.join(ROOT_DIR, ".github", "workflows", "release-addon.yml");
+const PR_TEMPLATE_PATH = path.join(ROOT_DIR, ".github", "pull_request_template.md");
 const CHANGELOG_PATH = path.join(ROOT_DIR, "CHANGELOG.md");
 const README_PATH = path.join(ROOT_DIR, "README.md");
 const CONTRIBUTING_PATH = path.join(ROOT_DIR, "CONTRIBUTING.md");
 
 function main() {
   const yaml = fs.readFileSync(WORKFLOW_PATH, "utf8");
+  const prTemplate = fs.readFileSync(PR_TEMPLATE_PATH, "utf8");
   const changelog = fs.readFileSync(CHANGELOG_PATH, "utf8");
   const readme = fs.readFileSync(README_PATH, "utf8");
   const contributing = fs.readFileSync(CONTRIBUTING_PATH, "utf8");
@@ -46,6 +48,10 @@ function main() {
   assert(
     contributing.includes("CHANGELOG.md"),
     "CONTRIBUTING.md should remind release authors to update CHANGELOG.md"
+  );
+  assert(
+    prTemplate.includes("CHANGELOG.md"),
+    "pull_request_template.md should prompt contributors to update CHANGELOG.md when behavior changes"
   );
 
   process.stdout.write("Release workflow checks OK\n");
