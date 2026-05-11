@@ -4,14 +4,14 @@ Last updated: 2026-05-11
 
 ## Current phase
 - Bridge model-backend slice complete and locally verified.
-- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is the remaining `mnaipro` hardening pass.
+- Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo now treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
+- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is now optional post-completion expansion rather than mandatory release hardening.
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are now wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` now runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
 - `scripts/check-ci.js` is now itself guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
 - `scripts/check-cli-smoke-portable.js` now guards the missing-sibling-root portable smoke path directly.
 - `npm run cli:smoke:portable` now exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
-- PR #4 is now open and marked ready for review, so the next step for that slice is review follow-up rather than more feature work on the same branch.
 - The pull request template now prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
 - `docs/release-process.md` now exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
 
@@ -49,7 +49,7 @@ Last updated: 2026-05-11
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- Continue the remaining `mnaipro` product-line hardening and decide the next experimental/private capability to gate behind the new surface, or move on to phase 7 release hardening if no concrete private probe is ready.
+- If we continue, start phase 8 optional post-completion expansion; otherwise the stable public surfaces are complete and release hardening is done.
 
 ## Last validated locally
 - `node --check cli/mnaipro.js`
@@ -60,11 +60,13 @@ Last updated: 2026-05-11
 - `node scripts/check-release-addon-workflow.js`
 - `CI=true node scripts/check-cli-smoke.js --json`
 - `CI=true npm run check:ci`
+- `gh pr checks 4 --watch --fail-fast`
 - `node scripts/check-cli-smoke.js --help`
 - `npm run cli:smoke:portable -- --json`
 - `node scripts/check-ci-orchestrator.js`
 - `node scripts/check-cli-smoke-portable.js`
 - `npm run check:ci`
+- `npm run check:ci` on merged `main`
 - `node scripts/check-cli-smoke.js`
 - `npm run check`
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental status --json`
