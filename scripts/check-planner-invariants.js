@@ -131,6 +131,30 @@ function buildVisibleColorCorrectionPlan() {
   ]);
 }
 
+function buildHiddenColorCorrectionPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "r-2",
+      title: "Theorem 2",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem 2. A compact theorem statement already exists here.",
+      colorIndex: 3,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: null,
+      visualDepth: 4,
+      visibleInMindMap: false,
+      branchClosed: false,
+      hidden: true,
+      zLevel: null,
+      groupMode: "",
+    },
+  ]);
+}
+
 function buildDeferredVisualOnlyStrategyPacks() {
   return buildStrategyPacks(
     [],
@@ -775,6 +799,14 @@ function validateVisibleColorCorrection(plan) {
   );
 }
 
+function validateHiddenColorSkip(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  assert(
+    !actions.some((action) => action.type === "set_color_index"),
+    "hidden note should not receive a color correction"
+  );
+}
+
 function validateStrategyPacks(plan) {
   const strategyPacks = Array.isArray(plan.strategyPacks) ? plan.strategyPacks : [];
   const actionKeys = new Set((plan.actions || []).map((action) => action.actionKey));
@@ -931,6 +963,7 @@ function validateFollowupGroupedDigestSuppression(plan) {
 function main() {
   const plan = buildSamplePlan();
   const visibleRecolorPlan = buildVisibleColorCorrectionPlan();
+  const hiddenRecolorPlan = buildHiddenColorCorrectionPlan();
   const semanticDeferredPlan = buildSemanticDeferredOnlyPlan();
   const pureOrganizedEnoughPlan = buildPureOrganizedEnoughPlan();
   const visualDeferredOnlyPacks = buildDeferredVisualOnlyStrategyPacks();
@@ -950,6 +983,7 @@ function main() {
   validateUnsupported(unsupportedActions);
   validateColorPolicy(actions);
   validateVisibleColorCorrection(visibleRecolorPlan);
+  validateHiddenColorSkip(hiddenRecolorPlan);
   validateStrategyPacks(plan);
   validateOrganizedEnoughPack(semanticDeferredPlan, {
     rootNoteId: "s-1",
