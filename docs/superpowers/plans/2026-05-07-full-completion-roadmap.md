@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** complete. This roadmap has been executed and is retained as a historical planning artifact; current phase state lives in `PROJECT_STATUS.md` and durable decisions live in `PROJECT_MEMORY.md`.
+
 **Goal:** bring this repository from the current `mnaipro`-centered baseline to a stable, shippable set of separated product lines: `mnaipro`, `marginnote-cli`, `mn-obsidian-bridge`, and a provider-agnostic bridge model backend.
 
 **Architecture:** keep the three product lines separate, finish the stable public read/write surfaces first, then add the provider-agnostic bridge backend, then gate private or experimental integrations behind explicit flags, and finally harden release and GitHub workflows. Safe, preview-first behavior remains the default unless a command is explicitly documented as write-enabled.

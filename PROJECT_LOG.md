@@ -41,6 +41,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The project log itself was created and then reworked into this chronological form so the thread history can be read as a timeline instead of a transcript dump.
 - The working cadence now is: finish a slice, update the durable records, and commit immediately without asking.
 - The phase 8 optional expansion is now complete on `main`; the operator launcher, docs, smoke coverage, and durable records all agree on the stable top-layer boundary.
+- The old roadmap and operator-launcher plan docs were marked as historical artifacts so they no longer read like active work items.
 - The current phase is now clear:
   - phase 7 release hardening is complete
   - the live work has crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory

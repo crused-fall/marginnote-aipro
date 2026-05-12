@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** complete. `mnaipro operator` landed on `main`; this plan is kept as a historical implementation record while live status lives in `PROJECT_STATUS.md`.
+
 **Goal:** add a thin `mnaipro operator` launcher that inspects the stable CLI surfaces, recommends the next stable command, and can optionally run that command without changing the default preview-first behavior.
 
 **Architecture:** keep the launcher entirely on top of the existing stable `mnaipro` surfaces. The new command will reuse the current status / doctor / overview evidence, choose one recommended stable follow-up command from a small deterministic decision tree, and print a readable operator report in both text and JSON. Optional execution will shell out to the existing `mnaipro` binary only; no new backend or hidden side channel is introduced.
@@ -200,4 +202,3 @@ Expected: the operator launcher, updated counts, and help surface all pass.
 Run: `npm run check:ci`
 
 Expected: the repository still passes the CI-safe verification subset.
-
