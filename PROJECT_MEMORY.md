@@ -69,3 +69,22 @@ Canonical long-term memory for this repository.
 ## Current long-term direction
 - Keep expanding the standalone CLI surfaces so MarginNote native capabilities, the plugin workflow, and the Obsidian bridge stay separated and testable.
 - Keep the bridge model backend provider-agnostic by default, with dry-run as the safe preview path and explicit configuration required before real execution.
+
+## Remaining functional gaps
+- The visual organization surface is still intentionally conservative; richer color policy and broader styling are not finished beyond the current role-based first pass.
+- Structural edits beyond note-local content and metadata writes are still not a stable public surface in the raw helper shell; parent/child rewrites, canvas dragging, and direct layout changes remain suggestion-only or experimental.
+- The richer Node-side adapter still models deeper structural writes that the stable helper shell has not yet exposed as a verified public write path.
+
+## Maintenance backlog
+- Keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and the quick reference aligned whenever shipped behavior or the maintenance boundary changes.
+- Keep the three product lines isolated: `mnaipro`, `marginnote-cli`, and `mn-obsidian-bridge`.
+- Keep the CI-safe validation ladder green, especially `npm run check:ci` and `npm run check`, and rerun the narrow smoke checks after documentation or behavior changes.
+- Keep `CHANGELOG.md` updated for user-visible changes and keep generated artifacts out of version control.
+- Keep archived planning docs clearly historical so they do not read like active work items.
+
+## Prioritized backlog
+1. Preserve the maintenance-only boundary first: update status, memory, and log together whenever anything changes.
+2. Finish any safe visual-strategy polish still needed for `mnaipro`, especially color-policy quality.
+3. Decide whether a future experimental slice should expose deeper structural edits beyond note-local writes.
+4. Preserve the standalone product-line separation and avoid new hidden cross-repo coupling.
+5. Keep validation, changelog, and release documentation in lockstep.
