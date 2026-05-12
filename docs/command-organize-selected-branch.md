@@ -72,6 +72,7 @@ The command applies only supported public-api actions.
 
 `set_title` may also be used to disambiguate duplicate sibling titles when the planner can produce specific, unique, content-based rename proposals with high confidence.
 `set_color_index` is the first controlled visual action: it should remain preview-first, explain why a role-based color is suggested, and only execute after confirmation.
+The same pass can also correct a small number of visibly important notes that already have a stale color, but only when the role signal is strong enough to justify a focused recolor instead of repainting the branch.
 The first pass should also stay conservative: keep structural branch colors, then only surface a small number of the clearest non-summary recolor suggestions instead of repainting an entire branch at once.
 When shape signals are available, those non-summary recolors should prefer notes that are currently visible and visually important in the mind map, instead of spending the first pass on hidden or deep-offscreen leaves.
 

@@ -107,6 +107,30 @@ function buildPureOrganizedEnoughPlan() {
   ]);
 }
 
+function buildVisibleColorCorrectionPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "r-1",
+      title: "Theorem 1",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem 1. A compact theorem statement already exists here.",
+      colorIndex: 3,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 180, y: 120, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+  ]);
+}
+
 function buildDeferredVisualOnlyStrategyPacks() {
   return buildStrategyPacks(
     [],
@@ -728,6 +752,29 @@ function validateColorPolicy(actions) {
   );
 }
 
+function validateVisibleColorCorrection(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  const recolorAction = actions.find(
+    (action) =>
+      action.type === "set_color_index" &&
+      action.noteId === "r-1" &&
+      action.colorIndex === 4
+  );
+  assert(recolorAction, "visible theorem note with a stale color should be recolored");
+  assert(
+    recolorAction.visualRole === "theorem",
+    `unexpected recolor visual role: ${recolorAction.visualRole}`
+  );
+  assert(
+    recolorAction.meta &&
+      Array.isArray(recolorAction.meta.evidence) &&
+      recolorAction.meta.evidence.some(
+        (item) => /current color index 3|当前颜色索引 3/i.test(item)
+      ),
+    "visible recolor should explain the stale current color in its evidence"
+  );
+}
+
 function validateStrategyPacks(plan) {
   const strategyPacks = Array.isArray(plan.strategyPacks) ? plan.strategyPacks : [];
   const actionKeys = new Set((plan.actions || []).map((action) => action.actionKey));
@@ -883,6 +930,7 @@ function validateFollowupGroupedDigestSuppression(plan) {
 
 function main() {
   const plan = buildSamplePlan();
+  const visibleRecolorPlan = buildVisibleColorCorrectionPlan();
   const semanticDeferredPlan = buildSemanticDeferredOnlyPlan();
   const pureOrganizedEnoughPlan = buildPureOrganizedEnoughPlan();
   const visualDeferredOnlyPacks = buildDeferredVisualOnlyStrategyPacks();
@@ -901,6 +949,7 @@ function main() {
   validateCounts(plan);
   validateUnsupported(unsupportedActions);
   validateColorPolicy(actions);
+  validateVisibleColorCorrection(visibleRecolorPlan);
   validateStrategyPacks(plan);
   validateOrganizedEnoughPack(semanticDeferredPlan, {
     rootNoteId: "s-1",

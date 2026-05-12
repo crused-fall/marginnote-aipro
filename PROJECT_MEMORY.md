@@ -71,7 +71,7 @@ Canonical long-term memory for this repository.
 - Keep the bridge model backend provider-agnostic by default, with dry-run as the safe preview path and explicit configuration required before real execution.
 
 ## Remaining functional gaps
-- The visual organization surface is still intentionally conservative; richer color policy and broader styling are not finished beyond the current role-based first pass.
+- The visual organization surface is still intentionally conservative; broader styling is not finished beyond the current role-based first pass and the small stale-color correction now allowed for visibly important notes.
 - Structural edits beyond note-local content and metadata writes are still not a stable public surface in the raw helper shell; parent/child rewrites, canvas dragging, and direct layout changes remain suggestion-only or experimental.
 - The richer Node-side adapter still models deeper structural writes that the stable helper shell has not yet exposed as a verified public write path.
 
@@ -84,7 +84,7 @@ Canonical long-term memory for this repository.
 
 ## Prioritized backlog
 1. Preserve the maintenance-only boundary first: update status, memory, and log together whenever anything changes.
-2. Finish any safe visual-strategy polish still needed for `mnaipro`, especially color-policy quality.
+2. Finish any safe visual-strategy polish still needed for `mnaipro`, especially broader visual styling and color-policy quality.
 3. Decide whether a future experimental slice should expose deeper structural edits beyond note-local writes.
 4. Preserve the standalone product-line separation and avoid new hidden cross-repo coupling.
 5. Keep validation, changelog, and release documentation in lockstep.

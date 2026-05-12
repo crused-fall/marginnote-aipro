@@ -975,18 +975,21 @@ function buildColorAction(node, nodeMap, locale) {
 
   const nextColorIndex = VISUAL_ROLE_COLOR_INDEX[role];
   if (typeof nextColorIndex !== "number") return null;
-  if (typeof node.colorIndex === "number" && node.colorIndex === nextColorIndex) {
+  const currentColor = typeof node.colorIndex === "number" ? node.colorIndex : null;
+  if (currentColor === nextColorIndex) {
     return null;
   }
-  if (typeof node.colorIndex === "number" && node.colorIndex > 0 && role !== "summary_branch") {
-    return null;
+  const shapeContext = buildColorShapeContext(node, nodeMap, locale);
+  if (currentColor !== null && currentColor > 0 && role !== "summary_branch") {
+    const shouldRecolor = !!node.visibleInMindMap && shapeContext.salience >= 2;
+    if (!shouldRecolor) {
+      return null;
+    }
   }
-
   const localizedRole = localizeTopicLabel(
     role === "summary_branch" ? "summary" : role,
     locale
   );
-  const shapeContext = buildColorShapeContext(node, nodeMap, locale);
   const evidence = [
     role === "summary_branch"
       ? locale === "zh"
@@ -1000,6 +1003,13 @@ function buildColorAction(node, nodeMap, locale) {
       : `Suggested color index ${nextColorIndex}`,
     ...shapeContext.evidence,
   ];
+  if (currentColor !== null && currentColor !== nextColorIndex) {
+    evidence.push(
+      locale === "zh"
+        ? `当前颜色索引 ${currentColor} 与建议颜色不同`
+        : `Current color index ${currentColor} differs from the suggested role color`
+    );
+  }
 
   return {
     type: "set_color_index",
