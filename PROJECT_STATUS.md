@@ -9,6 +9,7 @@ Last updated: 2026-05-12
 - The repository uses a `main`-as-merge-branch model with branch-and-PR support for larger slices; any future roadmap item is a maintenance slice or a new product slice, not unfinished release hardening.
 - Phase 8 optional expansion is complete on `main`; the `mnaipro operator` launcher and its docs/smoke coverage are in place as the thin top-layer workflow above the stable CLI surfaces.
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
+- The safe visual-strategy slice now keeps visible stale-color corrections available for salient notes while skipping hidden or deep-offscreen non-summary notes, and the regression suite covers both branches.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
 - `scripts/check-ci.js` is guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
