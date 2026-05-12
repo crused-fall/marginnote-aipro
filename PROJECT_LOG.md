@@ -40,10 +40,11 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The workspace boundary was re-confirmed: `Marginnote-AIpro` is the active repo, and the earlier `proactive-info-base` detour was a scope mistake that got corrected.
 - The project log itself was created and then reworked into this chronological form so the thread history can be read as a timeline instead of a transcript dump.
 - The working cadence now is: finish a slice, update the durable records, and commit immediately without asking.
+- The phase 8 optional expansion is now complete on `main`; the operator launcher, docs, smoke coverage, and durable records all agree on the stable top-layer boundary.
 - The current phase is now clear:
   - phase 7 release hardening is complete
-  - the live work is phase 8 optional expansion on top of stable surfaces
-  - the next step is the operator/tooling layer, not more release hardening
+  - the live work has crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory
+  - there is no remaining phase 8 operator/tooling work to finish
 
 ## Thread Index
 
@@ -110,4 +111,4 @@ Key conclusion:
 - Safety model: preview first, then apply only stable actions that the helper shell can actually support.
 - Surface split: `mnaipro` for the plugin workflow, `marginnote-cli` for native MarginNote state, and `mn-obsidian-bridge` for bridge diagnostics.
 - Thread state: `019d6b92` is archived, `019e1913` is its live fork, and `019e1c73` is the current session.
-- Current process state: the work is in phase 8 optional expansion, not phase 7 release hardening.
+- Current process state: phase 8 optional expansion is complete on `main`; remaining work is now ordinary maintenance or new product slices, not unfinished phase 8 work.

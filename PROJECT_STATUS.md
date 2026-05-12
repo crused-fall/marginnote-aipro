@@ -6,7 +6,7 @@ Last updated: 2026-05-12
 - Bridge model-backend slice complete and locally verified.
 - Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo now treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
 - The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is now optional post-completion expansion rather than mandatory release hardening.
-- The `mnaipro operator` launcher now sits on top of the stable CLI surfaces as the first phase 8 optional expansion entrypoint.
+- Phase 8 optional expansion is complete on `main`; the `mnaipro operator` launcher and its docs/smoke coverage are in place as the thin top-layer workflow above the stable CLI surfaces.
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are now wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` now runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
@@ -53,7 +53,7 @@ Last updated: 2026-05-12
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- If we continue, extend the phase 8 optional operator tooling layer on top of the stable CLI surfaces; otherwise the stable public surfaces are complete and release hardening is done.
+- No mandatory phase 8 work remains; future changes should be treated as new bugfix slices or new product slices, not as unfinished phase 8 work.
 
 ## Last validated locally
 - `node --check cli/mnaipro.js`
