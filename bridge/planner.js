@@ -1019,6 +1019,7 @@ function buildColorAction(node, nodeMap, locale) {
     noteId: node.noteId,
     visualRole: role,
     visualSalience: shapeContext.salience,
+    currentColorIndex: currentColor,
     colorIndex: nextColorIndex,
     reason:
       locale === "zh"
@@ -1040,6 +1041,10 @@ function visualRolePriority(action) {
   return 99;
 }
 
+function visualColorCorrectionPriority(action) {
+  return typeof action?.currentColorIndex === "number" && action.currentColorIndex > 0 ? 0 : 1;
+}
+
 function pruneExcessColorActions(actions, notes, stage, locale) {
   if (stage !== "primary") {
     return Array.isArray(actions) ? [...actions] : [];
@@ -1056,6 +1061,9 @@ function pruneExcessColorActions(actions, notes, stage, locale) {
   const keepKeys = new Set(
     [...nonSummaryColorActions]
       .sort((left, right) => {
+        const correctionDelta =
+          visualColorCorrectionPriority(left) - visualColorCorrectionPriority(right);
+        if (correctionDelta !== 0) return correctionDelta;
         const salienceDelta = (right.visualSalience || 0) - (left.visualSalience || 0);
         if (salienceDelta !== 0) return salienceDelta;
         const priorityDelta = visualRolePriority(left) - visualRolePriority(right);

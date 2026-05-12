@@ -44,6 +44,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The old roadmap and operator-launcher plan docs were marked as historical artifacts so they no longer read like active work items.
 - The remaining template-governance plan and spec were also marked as historical artifacts so the last active-looking design doc no longer reads like a live task.
 - The next visual-strategy polish slice tightened the first-pass color boundary: visible stale colors can still be corrected for salient notes, while hidden or deep-offscreen non-summary notes are excluded from recoloring; the invariant suite now covers both branches.
+- The color-pruning rule was then refined so visible recolors that correct an existing color keep their slot ahead of fresh color suggestions when the first pass needs to trim to the primary cap.
 - The current phase was recorded as clear:
   - phase 7 release hardening is complete
   - the live work had crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory
