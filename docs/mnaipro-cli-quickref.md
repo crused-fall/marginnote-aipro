@@ -2,6 +2,8 @@
 
 `mnaipro` is the thin local command-line wrapper around the MarginNote bridge.
 
+This quick reference documents the shipped command surfaces. The repository is in maintenance-only mode on `main`; there is no remaining phase 8 work.
+
 ## Core commands
 
 ```bash

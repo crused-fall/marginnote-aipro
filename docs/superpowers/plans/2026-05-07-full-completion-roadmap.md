@@ -4,6 +4,8 @@
 
 **Status:** complete. This roadmap has been executed and is retained as a historical planning artifact; current phase state lives in `PROJECT_STATUS.md` and durable decisions live in `PROJECT_MEMORY.md`.
 
+This record is historical. Any present-tense or remaining-work wording below describes the state at the time this roadmap was written, not current open work.
+
 **Goal:** bring this repository from the current `mnaipro`-centered baseline to a stable, shippable set of separated product lines: `mnaipro`, `marginnote-cli`, `mn-obsidian-bridge`, and a provider-agnostic bridge model backend.
 
 **Architecture:** keep the three product lines separate, finish the stable public read/write surfaces first, then add the provider-agnostic bridge backend, then gate private or experimental integrations behind explicit flags, and finally harden release and GitHub workflows. Safe, preview-first behavior remains the default unless a command is explicitly documented as write-enabled.
@@ -20,9 +22,9 @@ The repo is already past the “blank starter” stage. The current baseline inc
 - Breakdown diagnostics, replay helpers, visual strategy packs, and template-governance previews
 - local smoke coverage and command-surface inspection scripts
 - repo-level docs, memory, and GitHub workflow scaffolding
-- an in-progress provider-agnostic model backend branch on top of the bridge and CLI surfaces
+- a provider-agnostic model backend branch that was in progress at the time on top of the bridge and CLI surfaces
 
-The roadmap below assumes that baseline and sequences the remaining work from safest to most open-ended.
+The roadmap below assumed that baseline and sequenced the work that remained at the time from safest to most open-ended.
 
 ## Dependency order
 
@@ -82,7 +84,7 @@ The roadmap below assumes that baseline and sequences the remaining work from sa
 - `scripts/replay-requests.js`
 - `scripts/replay-after-apply.js`
 
-**Work to finish:**
+**Work that remained at the time:**
 - keep preview/apply/follow-up/replay aligned with one planning model
 - finish the selected-branch safety boundaries so they stay subtree-only and explainable
 - keep zero-action conclusions, visual strategy packs, branch overview excerpts, and template-governance previews stable
@@ -110,7 +112,7 @@ The roadmap below assumes that baseline and sequences the remaining work from sa
 - `docs/mnaipro-cli-quickref.md`
 - `PROJECT_MEMORY.md`
 
-**Work to finish:**
+**Work that remained at the time:**
 - expose stable `app` and `ai` command groups
 - keep the command registry and `surfaceDocs` catalog in sync so help text never drifts from capability reporting
 - complete supported read/write coverage for native AI and app state surfaces already evidenced on disk

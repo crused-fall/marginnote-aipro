@@ -1,8 +1,10 @@
 # MarginNote Agent Plugin Starter
 
-This repository is a pragmatic starter for turning MarginNote AI into a more agent-like workflow.
+This repository contains the MarginNote AI plugin, CLI, and bridge surfaces for a more agent-like workflow.
 
-The product goal now explicitly includes both structural cleanup and selective visual cleanup, such as controlled card-color changes that help a branch read more clearly in the mind map.
+The repo is in maintenance-only mode on `main`: phase 7 release hardening and the phase 8 optional expansion are complete, and the durable records now document shipped behavior rather than active roadmap work.
+
+The product goal covers both structural cleanup and selective visual cleanup, such as controlled card-color changes that help a branch read more clearly in the mind map.
 
 It is split into two parts:
 

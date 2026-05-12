@@ -154,7 +154,7 @@ Expected: the command registry, help footer, and operator launcher assertions al
 - Modify: `README.md`
 - Modify: `docs/mnaipro-cli-quickref.md`
 
-- [x] **Step 1: Record the operator launcher as the current phase 8 expansion**
+- [x] **Step 1: Record the operator launcher as the completed phase 8 expansion**
 
 ```md
 - `mnaipro operator` is the thin operator launcher that inspects stable surfaces and can run the next stable command on demand.
@@ -163,7 +163,7 @@ Expected: the command registry, help footer, and operator launcher assertions al
 - [x] **Step 2: Update the project status so future work reflects the new surface**
 
 ```md
-- The phase 8 optional expansion now includes the `mnaipro operator` launcher on top of the stable CLI surfaces.
+- The phase 8 optional expansion included the `mnaipro operator` launcher on top of the stable CLI surfaces.
 ```
 
 - [x] **Step 3: Update the quick reference and README examples**

@@ -31,7 +31,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
   - `main` as the merge branch
   - short-lived branches for larger slices
   - GitHub issues and PRs as collaboration state
-  - an eventual phase 8 optional expansion layer on top of the stable surfaces
+  - a phase 8 optional expansion layer on top of the stable surfaces
 - By the end of this thread, the project had moved from exploration into stable-surface hardening and release-oriented discipline.
 
 ### 2026-05-12
@@ -39,14 +39,14 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The current session re-read the repo docs, thread inventory, and current status files.
 - The workspace boundary was re-confirmed: `Marginnote-AIpro` is the active repo, and the earlier `proactive-info-base` detour was a scope mistake that got corrected.
 - The project log itself was created and then reworked into this chronological form so the thread history can be read as a timeline instead of a transcript dump.
-- The working cadence now is: finish a slice, update the durable records, and commit immediately without asking.
-- The phase 8 optional expansion is now complete on `main`; the operator launcher, docs, smoke coverage, and durable records all agree on the stable top-layer boundary.
+- The working cadence became: finish a slice, update the durable records, and commit immediately without asking.
+- The phase 8 optional expansion was completed on `main`; the operator launcher, docs, smoke coverage, and durable records all agree on the stable top-layer boundary.
 - The old roadmap and operator-launcher plan docs were marked as historical artifacts so they no longer read like active work items.
 - The remaining template-governance plan and spec were also marked as historical artifacts so the last active-looking design doc no longer reads like a live task.
-- The current phase is now clear:
+- The current phase was recorded as clear:
   - phase 7 release hardening is complete
-  - the live work has crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory
-  - there is no remaining phase 8 operator/tooling work to finish
+  - the live work had crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory
+  - there was no remaining phase 8 operator/tooling work to finish
 
 ## Thread Index
 
@@ -101,7 +101,7 @@ Progress:
 - Read `README.md`, `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, and `MEMORY.md`.
 - Rechecked the thread inventory and confirmed there are only three workspace-linked thread records.
 - Corrected the scope mistake around `proactive-info-base` and re-centered the work on `Marginnote-AIpro`.
-- Confirmed the repo is already past phase 7 release hardening and is now in optional phase 8 expansion territory.
+- Confirmed the repo had already passed phase 7 release hardening and was in optional phase 8 expansion territory.
 
 Key conclusion:
 - The current live work should stay on `Marginnote-AIpro` and continue the optional operator/tooling expansion from the established stable surfaces.
@@ -113,4 +113,4 @@ Key conclusion:
 - Safety model: preview first, then apply only stable actions that the helper shell can actually support.
 - Surface split: `mnaipro` for the plugin workflow, `marginnote-cli` for native MarginNote state, and `mn-obsidian-bridge` for bridge diagnostics.
 - Thread state: `019d6b92` is archived, `019e1913` is its live fork, and `019e1c73` is the current session.
-- Current process state: phase 8 optional expansion is complete on `main`; remaining work is now ordinary maintenance or new product slices, not unfinished phase 8 work.
+- Current process state: phase 8 optional expansion was complete on `main`; the work ahead was ordinary maintenance or new product slices, not unfinished phase 8 work.
