@@ -236,6 +236,30 @@ function buildVisibleColorRetentionPlan() {
   ]);
 }
 
+function buildVisibleFreshColorSkipPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "d-1",
+      title: "Theorem D",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem D. A compact theorem statement already exists here.",
+      colorIndex: null,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 700, y: 40, width: 160, height: 80 },
+      visualDepth: 4,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+  ]);
+}
+
 function buildDeferredVisualOnlyStrategyPacks() {
   return buildStrategyPacks(
     [],
@@ -903,6 +927,14 @@ function validateVisibleColorRetention(plan) {
   );
 }
 
+function validateVisibleFreshColorSkip(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  assert(
+    !actions.some((action) => action.type === "set_color_index" && action.noteId === "d-1"),
+    "deep visible note without an existing color should stay out of the first-pass color surface"
+  );
+}
+
 function validateStrategyPacks(plan) {
   const strategyPacks = Array.isArray(plan.strategyPacks) ? plan.strategyPacks : [];
   const actionKeys = new Set((plan.actions || []).map((action) => action.actionKey));
@@ -1061,6 +1093,7 @@ function main() {
   const visibleRecolorPlan = buildVisibleColorCorrectionPlan();
   const hiddenRecolorPlan = buildHiddenColorCorrectionPlan();
   const visibleRetentionPlan = buildVisibleColorRetentionPlan();
+  const visibleFreshSkipPlan = buildVisibleFreshColorSkipPlan();
   const semanticDeferredPlan = buildSemanticDeferredOnlyPlan();
   const pureOrganizedEnoughPlan = buildPureOrganizedEnoughPlan();
   const visualDeferredOnlyPacks = buildDeferredVisualOnlyStrategyPacks();
@@ -1082,6 +1115,7 @@ function main() {
   validateVisibleColorCorrection(visibleRecolorPlan);
   validateHiddenColorSkip(hiddenRecolorPlan);
   validateVisibleColorRetention(visibleRetentionPlan);
+  validateVisibleFreshColorSkip(visibleFreshSkipPlan);
   validateStrategyPacks(plan);
   validateOrganizedEnoughPack(semanticDeferredPlan, {
     rootNoteId: "s-1",

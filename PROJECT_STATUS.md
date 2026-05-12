@@ -11,6 +11,7 @@ Last updated: 2026-05-12
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 - The safe visual-strategy slice now keeps visible stale-color corrections available for salient notes while skipping hidden or deep-offscreen non-summary notes, and the regression suite covers both branches.
 - When the first-pass color surface needs pruning, visible recolors now stay ahead of fresh color suggestions so explicit corrections survive the limit.
+- Fresh visible color suggestions now also stay conservative: if a visible note has no existing color correction need and the shape signal is weak, it is excluded from the first-pass color surface.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
 - `scripts/check-ci.js` is guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.

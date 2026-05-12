@@ -980,10 +980,14 @@ function buildColorAction(node, nodeMap, locale) {
     return null;
   }
   const shapeContext = buildColorShapeContext(node, nodeMap, locale);
+  const hasExistingColor = currentColor !== null && currentColor > 0;
   if (role !== "summary_branch" && !node.visibleInMindMap) {
     return null;
   }
-  if (currentColor !== null && currentColor > 0 && role !== "summary_branch") {
+  if (role !== "summary_branch" && !hasExistingColor && shapeContext.salience < 3) {
+    return null;
+  }
+  if (hasExistingColor && role !== "summary_branch") {
     const shouldRecolor = !!node.visibleInMindMap && shapeContext.salience >= 2;
     if (!shouldRecolor) {
       return null;
