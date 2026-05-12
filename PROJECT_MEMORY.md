@@ -25,6 +25,7 @@ Canonical long-term memory for this repository.
 - `mnaipro breakdown smoke` defaults to self-hosted mode and can reuse an explicit bridge via `--bridge-base-url` or `--base-url` before or after the subcommand.
 - `mnaipro capabilities` exposes the current `mnaipro` command registry, capability groups, and the shared `surfaceDocs` catalog used by `mnaipro --help` in a stable JSON/text shape.
 - `mnaipro overview` is the top-level workflow evidence map for the plugin/agent CLI, combining status, doctor, capabilities, and Breakdown evidence in one stable report.
+- `mnaipro operator` is the thin launcher on top of the stable `mnaipro` surfaces; it recommends the next stable command from the current health evidence and can optionally execute that command with `--run`, preserving explicit bridge and vault context when it launches the child command.
 - `mnaipro breakdown postprocess` falls back to the latest apply report's `afterBranch` snapshot as a proxy input when no dedicated Breakdown artifacts exist, and also exposes a `--live-only` mode that disables that proxy path when we need to compare against true Breakdown artifacts only.
 - `mnaipro followup latest` and `mnaipro followup apply latest` now surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`, so the follow-up diagnostics read like an overview rather than a generic excerpt fill.
 - `mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay stay aligned with live follow-up vocabulary.
@@ -32,6 +33,7 @@ Canonical long-term memory for this repository.
 - `bridge/model-backend.js` is a provider-agnostic execution surface with preview/dry-run default behavior, trace persistence, replay hooks, and `/model/run`, `/model/replay`, and `/model/latest` endpoints.
 - `mnaipro request post /model/run` is the supported raw preview entrypoint into that model backend, `mnaipro request post /model/replay` is the supported replay entrypoint, and `mnaipro request get /model/latest` is the supported latest-trace inspection path.
 - `mnaipro status`, `mnaipro doctor`, and `mnaipro overview` surface model-backend readiness and latest execution evidence so operators can see the backend state without leaving the main CLI.
+- `mnaipro doctor` and `bridge doctor` tail only the last bounded chunk of very large supervisor logs so diagnostics stay safe when log files grow unexpectedly.
 - `plugin/agent-core.js` now mirrors the stable addon shell for `remove_comments_by_text` by trying `removeCommentByIndex`, `getCommentIndex + removeCommentByIndex`, `removeCommentByCondition`, and raw comment-array fallbacks in that order, with `scripts/check-plugin-agent-core.js` as the focused parity regression.
 - `marginnote-cli overview` is the top-level MarginNote-native evidence map, combining app inspection, doctor, AI overview, and capabilities in one stable report.
 - `marginnote-cli capabilities` now also exposes a shared `surfaceDocs` command-surface catalog so `capabilities` and `--help` stay aligned.
@@ -47,6 +49,7 @@ Canonical long-term memory for this repository.
 - The pull request template now prompts contributors to update `CHANGELOG.md` when user-visible behavior changes, keeping release notes and review checklists aligned.
 - `docs/release-process.md` now captures the canonical release checklist and publish paths, and the release workflow check asserts that it keeps the changelog, validation commands, and publish triggers in sync.
 - Phase 7 release hardening is complete on `main` after PR #4 merged; the stable public release path now explicitly centers `CHANGELOG.md`, `docs/release-process.md`, the PR checklist, and the CI-safe smoke gate.
+- Phase 8 optional expansion starts with `mnaipro operator` as a thin launcher layer above the stable CLI surfaces, not as a hidden dependency inside them.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
 - Release packaging should produce the `.mnaddon` archive outside version control, with git keeping source only.
 - The `release-addon` workflow now runs `npm run check:ci` before building, uploads the built archive as a workflow artifact on every run, and attaches it to a GitHub Release when the run is triggered by a `v*` tag; the smoke gate is portable by construction and the broader local cross-repo sweep remains available through `npm run check`.

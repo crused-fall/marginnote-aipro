@@ -1,11 +1,12 @@
 # Project Status
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 ## Current phase
 - Bridge model-backend slice complete and locally verified.
 - Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo now treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
 - The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is now optional post-completion expansion rather than mandatory release hardening.
+- The `mnaipro operator` launcher now sits on top of the stable CLI surfaces as the first phase 8 optional expansion entrypoint.
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are now wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` now runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
@@ -30,6 +31,8 @@ Last updated: 2026-05-11
 - The `mnaipro capabilities` command now exposes the live command registry and capability groups.
 - The `mnaipro capabilities` command now also exposes the shared `surfaceDocs` catalog used by `mnaipro --help`, so the command-surface help footer and the registry stay in sync.
 - The `mnaipro overview` command now exposes a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
+- The `mnaipro operator` command now provides a thin launcher for the next stable `mnaipro` command, with JSON, compact, and optional `--run` execution modes that preserve explicit bridge and vault context.
+- The `mnaipro doctor` and `bridge doctor` log tail readers now cap their file reads so very large supervisor logs do not blow up diagnostics.
 - `mnaipro breakdown postprocess` now falls back to the latest apply report's `afterBranch` snapshot when no dedicated Breakdown artifacts exist, so the preview can still inspect a real branch snapshot.
 - `mnaipro breakdown postprocess --live-only` now disables that proxy path, so we can compare true Breakdown artifacts against the proxy baseline without changing the default operator flow.
 - `mnaipro followup latest` and `mnaipro followup apply latest` now surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`.
@@ -49,10 +52,16 @@ Last updated: 2026-05-11
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
 ## Next work
-- If we continue, start phase 8 optional post-completion expansion; otherwise the stable public surfaces are complete and release hardening is done.
+- If we continue, extend the phase 8 optional operator tooling layer on top of the stable CLI surfaces; otherwise the stable public surfaces are complete and release hardening is done.
 
 ## Last validated locally
 - `node --check cli/mnaipro.js`
+- `node --check scripts/check-cli-smoke.js`
+- `node --check scripts/bridge-doctor.js`
+- `node --check scripts/check-ci.js`
+- `node scripts/check-cli-smoke.js --portable --json`
+- `npm run check:ci`
+- `npm run check`
 - `node --check bridge/experimental/gate.js`
 - `node --check bridge/experimental/diagnostics.js`
 - `node --check bridge/experimental/registry.js`

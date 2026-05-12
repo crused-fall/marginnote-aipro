@@ -7,6 +7,9 @@
 ```bash
 mnaipro doctor
 mnaipro status
+mnaipro operator
+mnaipro operator --json
+mnaipro operator --run --compact
 mnaipro plan latest
 mnaipro followup latest
 mnaipro followup apply latest
@@ -21,6 +24,8 @@ mnaipro --base-url http://127.0.0.1:8765 breakdown smoke --case organized-enough
 mnaipro breakdown postprocess
 mnaipro breakdown artifacts
 ```
+
+`mnaipro operator --run` forwards any explicit `--base-url` and `--obsidian-vault-path` context to the stable command it launches.
 
 ## Raw bridge access
 

@@ -24,6 +24,7 @@ It is split into two parts:
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
+  - `mnaipro operator` is the thin launcher that recommends the next stable `mnaipro` command and can run it with `--run`, while preserving explicit bridge and vault context for the launched command.
   - `mnaipro request get|post` exposes raw bridge passthrough, including the model backend endpoints when you need direct inspection or replay.
   - `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` are opt-in surfaces that stay hidden until `MNAIPRO_EXPERIMENTAL=1` is set; they report the experimental gate state, latest diagnostic evidence, and gated command registry without changing stable behavior.
   - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.
