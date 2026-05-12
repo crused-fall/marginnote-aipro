@@ -21,6 +21,7 @@ Last updated: 2026-05-12
 - Local `main` tracks `origin/main`.
 - Repo-specific operating rules live in `AGENTS.md`.
 - Long-term memory now has a dedicated `PROJECT_MEMORY.md`.
+- Thread-level progress now has a dedicated, chronological `PROJECT_LOG.md`.
 - Current phase tracking now has a dedicated `PROJECT_STATUS.md`.
 - GitHub issue templates, pull request template, and CI workflow are in place.
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.

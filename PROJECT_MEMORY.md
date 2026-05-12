@@ -58,6 +58,8 @@ Canonical long-term memory for this repository.
 ## Change discipline
 - If a decision changes, update this file first.
 - If a work item changes the current phase, update `PROJECT_STATUS.md` in the same change.
+- When a slice is complete, commit it immediately without asking for confirmation.
+- Update the relevant memory/status/log files in the same change before moving on to the next slice.
 
 ## Current long-term direction
 - Keep expanding the standalone CLI surfaces so MarginNote native capabilities, the plugin workflow, and the Obsidian bridge stay separated and testable.
