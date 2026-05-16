@@ -1142,9 +1142,10 @@ function buildStatusReport(statusInfo, obsidianVaultPath) {
   return payload;
 }
 
-async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
-  const statusInfo = await readStatus(baseUrl || DEFAULT_BASE_URL);
-  const bridgePayload = statusInfo.payload || bridgeStatus();
+async function buildDoctorSummary(baseUrl, obsidianVaultPath, statusInfo = null) {
+  const effectiveStatusInfo =
+    statusInfo || (await readStatus(baseUrl || DEFAULT_BASE_URL));
+  const bridgePayload = effectiveStatusInfo.payload || bridgeStatus();
   const latestDiagnostic = latestDiagnosticWithFallback();
   const obsidianSyncSettings = summarizeObsidianSyncSettings(obsidianVaultPath);
   const breakdownArtifacts = bridgePayload.breakdownArtifacts || buildBreakdownArtifactAudit();
@@ -1191,7 +1192,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     launchdStdout: tailLines(path.join(installedLogsDir, "launchd.stdout.log"), 20),
     launchdStderr: tailLines(path.join(installedLogsDir, "launchd.stderr.log"), 20),
   };
-  const bridgeReachable = statusInfo.ok && statusInfo.source === "live_http";
+  const bridgeReachable = effectiveStatusInfo.ok && effectiveStatusInfo.source === "live_http";
   const checks = {
     bridgeReachable,
     fallbackAvailable: !!bridgePayload,
@@ -1210,7 +1211,7 @@ async function buildDoctorSummary(baseUrl, obsidianVaultPath) {
     kind: "doctor",
     title: "mnaipro doctor",
     summary: `Bridge ${bridgeReachable ? "reachable" : "offline"}; model backend ${modelBackend && modelBackend.configured ? `${modelBackend.available ? "ready" : "configured"}` : "disabled"}; Breakdown artifacts ${breakdownArtifacts.status}; follow-up apply ${latestFollowupApply ? "present" : "missing"}; Obsidian settings ${obsidianSyncSettings.exists ? "present" : "missing"}.`,
-    source: statusInfo.source,
+    source: effectiveStatusInfo.source,
     bridgeOffline: !bridgeReachable,
     bridgeOfflineReason: bridgeReachable ? null : bridgePayload.bridgeOfflineReason || null,
     bridgeStatus: bridgePayload,
@@ -1357,7 +1358,7 @@ async function buildOverviewReport(program, options = {}) {
   const obsidianVaultPath = options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH;
   const statusInfo = await readStatus(baseUrl);
   const statusReport = buildStatusReport(statusInfo, obsidianVaultPath);
-  const doctorReport = await buildDoctorSummary(baseUrl, obsidianVaultPath);
+  const doctorReport = await buildDoctorSummary(baseUrl, obsidianVaultPath, statusInfo);
   const capabilitiesReport = buildCapabilitiesReport(program);
   const surfaceState = buildOverviewSurfaces(statusReport, doctorReport, capabilitiesReport);
   const highlightState = {

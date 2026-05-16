@@ -25,6 +25,7 @@ Last updated: 2026-05-16
 - Stability/compatibility hardening, UI/usability refinements, code-review sweeps, and bug-fix slices now outrank any further feature-style polishing.
 - The conservative `mnaipro` visual-strategy work stays available only when a concrete regression, compatibility issue, or UI regression points there.
 - The concrete maintenance task list now lives in `MAINTENANCE_BACKLOG.md`, so automated check-ins have an explicit task source instead of only broad principles.
+- A likely next maintenance slice is to surface `bridgeOfflineReason` directly in compact `mnaipro status` / `mnaipro overview` output when the bridge falls back locally.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 
@@ -44,6 +45,7 @@ Last updated: 2026-05-16
 - The `mnaipro capabilities` command now exposes the live command registry and capability groups.
 - The `mnaipro capabilities` command now also exposes the shared `surfaceDocs` catalog used by `mnaipro --help`, so the command-surface help footer and the registry stay in sync.
 - The `mnaipro overview` command now exposes a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
+- The `mnaipro overview` command now reuses a single bridge-status probe for both its top-level status report and nested doctor report, so one transient `/status` failure cannot make the overview contradict itself.
 - The `mnaipro operator` command now provides a thin launcher for the next stable `mnaipro` command, with JSON, compact, and optional `--run` execution modes that preserve explicit bridge and vault context.
 - The `mnaipro doctor` and `bridge doctor` log tail readers now cap their file reads so very large supervisor logs do not blow up diagnostics.
 - `mnaipro breakdown postprocess` now falls back to the latest apply report's `afterBranch` snapshot when no dedicated Breakdown artifacts exist, so the preview can still inspect a real branch snapshot.
@@ -94,6 +96,7 @@ Last updated: 2026-05-16
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental status --json`
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental diagnostics --json`
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental registry --json`
+- `node scripts/check-cli-overview-consistency.js`
 - `node scripts/check-planner-invariants.js`
 - `npm run check:ci`
 - `npm run check`

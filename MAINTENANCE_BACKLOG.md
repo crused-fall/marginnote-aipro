@@ -10,8 +10,7 @@ It is intentionally operational: pick one item, inspect it, and if a real issue 
 4. Keep durable records aligned after any user-visible change.
 
 ## Current task candidates
-- Review `bridge/planner.js` and `scripts/check-planner-invariants.js` for ordering, pruning, and preview regressions around visual actions.
-- Review `cli/mnaipro.js` and `scripts/check-cli-smoke.js` for stale summary wording or confusing help text.
+- Review `cli/mnaipro.js` compact `status` / `overview` output for an explicit `bridgeOfflineReason` hint when the bridge falls back locally.
 - Review `README.md` and `docs/mnaipro-cli-quickref.md` for maintenance-mode, automation, and usability wording consistency.
 - Review `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, and `PROJECT_LOG.md` for record drift after any user-visible change.
 

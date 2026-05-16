@@ -62,6 +62,8 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The heartbeat policy was also clarified to prefer sustained maintenance blocks of at least 10 minutes, ideally 15-20 minutes or more, when safe work exists instead of stopping after only a cursory scan.
 - The heartbeat interval was then shortened from 45 minutes to 37 minutes so maintenance-oriented check-ins can land a bit more frequently.
 - A concrete `MAINTENANCE_BACKLOG.md` file was added so the automation has a specific low-risk task list to inspect instead of only broad maintenance principles.
+- `mnaipro overview` was then made internally consistent by reusing a single bridge-status probe for both the top-level status report and the nested doctor report, so a transient `/status` failure cannot make one overview contradict itself.
+- `scripts/check-cli-overview-consistency.js` was added as a focused regression that simulates a successful first `/status` probe followed by a transient failure, keeping the single-probe invariant covered by CI-safe checks.
 
 ## Thread Index
 

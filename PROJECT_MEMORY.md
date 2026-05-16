@@ -26,6 +26,7 @@ Canonical long-term memory for this repository.
 - `mnaipro breakdown smoke` defaults to self-hosted mode and can reuse an explicit bridge via `--bridge-base-url` or `--base-url` before or after the subcommand.
 - `mnaipro capabilities` exposes the current `mnaipro` command registry, capability groups, and the shared `surfaceDocs` catalog used by `mnaipro --help` in a stable JSON/text shape.
 - `mnaipro overview` is the top-level workflow evidence map for the plugin/agent CLI, combining status, doctor, capabilities, and Breakdown evidence in one stable report.
+- `mnaipro overview` reuses a single bridge-status probe for both its top-level status report and nested doctor report, so a transient `/status` flip cannot make one overview self-contradictory; `scripts/check-cli-overview-consistency.js` guards that invariant.
 - `mnaipro operator` is the thin launcher on top of the stable `mnaipro` surfaces; it recommends the next stable command from the current health evidence and can optionally execute that command with `--run`, preserving explicit bridge and vault context when it launches the child command. Phase 8 optional expansion completed with this launcher and its docs/smoke coverage.
 - `mnaipro breakdown postprocess` falls back to the latest apply report's `afterBranch` snapshot as a proxy input when no dedicated Breakdown artifacts exist, and also exposes a `--live-only` mode that disables that proxy path when we need to compare against true Breakdown artifacts only.
 - `mnaipro followup latest` and `mnaipro followup apply latest` now surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`, so the follow-up diagnostics read like an overview rather than a generic excerpt fill.
@@ -83,6 +84,7 @@ Canonical long-term memory for this repository.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
 - That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
+- After the overview-consistency fix, the next low-risk maintenance slice is to consider surfacing `bridgeOfflineReason` directly in compact `mnaipro status` / `mnaipro overview` output when the bridge falls back locally.
 - Keep docs and release hygiene aligned when a user-visible change lands, especially the status/memory/log trio plus `README.md` and `docs/mnaipro-cli-quickref.md`.
 - Keep product-line and GitHub remote boundaries explicit across the three repos.
 
