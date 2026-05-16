@@ -3,6 +3,7 @@
 `mnaipro` is the thin local command-line wrapper around the MarginNote bridge.
 
 This quick reference documents the shipped command surfaces. The repository is in maintenance-only mode on `main`; there is no remaining phase 8 work.
+The long-term maintenance runbook lives in `docs/maintenance-operations.md`, and `MAINTENANCE_BACKLOG.md` stays as the short queue for concrete checks.
 
 ## Core commands
 
