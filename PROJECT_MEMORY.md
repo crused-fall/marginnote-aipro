@@ -79,6 +79,7 @@ Canonical long-term memory for this repository.
 - The heartbeat automation should read this section first before choosing work.
 - Prioritize stability/compatibility hardening, UI/usability improvements, code-review sweeps, and small bug-fix slices before any further feature-style polish.
 - When safe maintenance work exists, the heartbeat should stay in a sustained work block for at least 10 minutes, preferably 15-20 minutes or more, before stopping, unless it has already completed and verified a concrete safe slice.
+- Read `MAINTENANCE_BACKLOG.md` after the durable records and before deciding on a task; it contains the explicit low-risk maintenance checks the heartbeat should prefer.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
 - That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
@@ -91,6 +92,7 @@ Canonical long-term memory for this repository.
 - The richer Node-side adapter still models deeper structural writes that the stable helper shell has not yet exposed as a verified public write path.
 
 ## Maintenance backlog
+- The explicit maintenance task list lives in `MAINTENANCE_BACKLOG.md`.
 - Keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and the quick reference aligned whenever shipped behavior or the maintenance boundary changes.
 - Keep the three product lines isolated: `mnaipro`, `marginnote-cli`, and `mn-obsidian-bridge`.
 - Keep the CI-safe validation ladder green, especially `npm run check:ci` and `npm run check`, and rerun the narrow smoke checks after documentation or behavior changes.

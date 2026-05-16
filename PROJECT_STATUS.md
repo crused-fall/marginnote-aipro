@@ -24,6 +24,7 @@ Last updated: 2026-05-16
 ## Next work candidates
 - Stability/compatibility hardening, UI/usability refinements, code-review sweeps, and bug-fix slices now outrank any further feature-style polishing.
 - The conservative `mnaipro` visual-strategy work stays available only when a concrete regression, compatibility issue, or UI regression points there.
+- The concrete maintenance task list now lives in `MAINTENANCE_BACKLOG.md`, so automated check-ins have an explicit task source instead of only broad principles.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 

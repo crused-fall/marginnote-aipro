@@ -61,6 +61,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The maintenance priority was then broadened to include UI improvements and usability work so automated check-ins can also pick up clarity and friction-reduction fixes.
 - The heartbeat policy was also clarified to prefer sustained maintenance blocks of at least 10 minutes, ideally 15-20 minutes or more, when safe work exists instead of stopping after only a cursory scan.
 - The heartbeat interval was then shortened from 45 minutes to 37 minutes so maintenance-oriented check-ins can land a bit more frequently.
+- A concrete `MAINTENANCE_BACKLOG.md` file was added so the automation has a specific low-risk task list to inspect instead of only broad maintenance principles.
 
 ## Thread Index
 
