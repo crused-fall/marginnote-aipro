@@ -58,6 +58,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The automation now reads that backlog directly, so later check-ins can select work from the documented list instead of re-deriving it every time.
 - The visual-strategy slice was then advanced a little further: color-action ordering now surfaces retained recolors before fresh suggestions, while summary-branch colors still stay first.
 - The automation focus then pivoted from feature-style polish toward stabilization, compatibility checks, code-review sweeps, and bug-fix work so later check-ins can prefer maintenance first.
+- The maintenance priority was then broadened to include UI improvements and usability work so automated check-ins can also pick up clarity and friction-reduction fixes.
 
 ## Thread Index
 

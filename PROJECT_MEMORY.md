@@ -77,7 +77,7 @@ Canonical long-term memory for this repository.
 
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
-- Prioritize stability/compatibility hardening, code-review sweeps, and small bug-fix slices before any further feature-style polish.
+- Prioritize stability/compatibility hardening, UI/usability improvements, code-review sweeps, and small bug-fix slices before any further feature-style polish.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
 - That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
@@ -98,7 +98,7 @@ Canonical long-term memory for this repository.
 
 ## Prioritized backlog
 1. Preserve the maintenance-only boundary first: update status, memory, and log together whenever anything changes.
-2. Run stability, compatibility, and bug-fix sweeps on the most recently touched surfaces before any further feature-style polish.
+2. Run stability, compatibility, UI/usability, and bug-fix sweeps on the most recently touched surfaces before any further feature-style polish.
 3. Decide whether a future experimental slice should expose deeper structural edits beyond note-local writes.
 4. Preserve the standalone product-line separation and avoid new hidden cross-repo coupling.
 5. Keep validation, changelog, and release documentation in lockstep.
