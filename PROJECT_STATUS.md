@@ -6,6 +6,7 @@ Last updated: 2026-05-16
 - Maintenance-only mode is in effect on `main`; phase 7 release hardening and the phase 8 optional expansion are both complete.
 - The long-term maintenance operating model is documented in `docs/maintenance-operations.md`, and `MAINTENANCE_BACKLOG.md` stays as the short queue for heartbeat selection.
 - `docs/release-process.md` now points routine maintenance slices at the same runbook, so the maintenance cadence and release preflight use one documented path.
+- The runbook now has an explicit compact UI review checklist, and `CONTRIBUTING.md` routes maintenance slices through the same backlog and guidance.
 - Bridge model-backend slice complete and locally verified.
 - Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
 - The repository uses a `main`-as-merge-branch model with branch-and-PR support for larger slices; any future roadmap item is a maintenance slice or a new product slice, not unfinished release hardening.
@@ -29,6 +30,7 @@ Last updated: 2026-05-16
 - The conservative `mnaipro` visual-strategy work stays available only when a concrete regression, compatibility issue, or UI regression points there.
 - The concrete maintenance task list now lives in `MAINTENANCE_BACKLOG.md`, so automated check-ins have an explicit task source instead of only broad principles.
 - The previous `mnaipro doctor --compact` parity gap is now closed; the next low-risk maintenance slices come from the runbook-backed backlog and stay focused on docs wording consistency, verification coverage, and record drift checks.
+- Compact UI/stability reviews should compare `mnaipro doctor --compact`, `mnaipro status --compact`, `mnaipro bridge doctor --compact`, `mnaipro bridge status --compact`, and `mnaipro overview --compact` side by side.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 

@@ -51,6 +51,23 @@ Before a tagged release or other publishable maintenance change:
 - `P1` — docs/help drift, compact/JSON parity gap, or smoke coverage gap. Fix in the next maintenance round.
 - `P2` — wording polish, backlog cleanup, or other low-risk clarity work. Batch when there is spare maintenance time.
 
+## UI / operator review
+
+When a pass is about UI or operator experience, compare the compact surfaces side by side:
+
+- `mnaipro doctor --compact`
+- `mnaipro status --compact`
+- `mnaipro bridge doctor --compact`
+- `mnaipro bridge status --compact`
+- `mnaipro overview --compact`
+
+Look for:
+
+- consistent labels for shared state such as `bridge_offline_reason`, `bridge_supervisor`, and `bridge_supervisor_pid`
+- short, action-oriented wording instead of duplicated long prose
+- hints that point at the same next step across the compact surfaces
+- stale wording that no longer matches the release or maintenance runbooks
+
 ## Check map
 
 Stable CLI and docs:

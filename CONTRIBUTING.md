@@ -12,9 +12,10 @@ This repository uses a branch-and-PR workflow.
 
 ## Before you open a PR
 - Pick one issue or one scoped slice of work.
+- If the change is a routine maintenance slice, read `docs/maintenance-operations.md` first and pick a concrete item from `MAINTENANCE_BACKLOG.md`.
 - Use the issue templates when filing new work.
 - Run `npm run check:ci` first.
-- Run `npm run check` when the change touches shared code paths or workflow behavior.
+- Run `npm run check` when the change touches shared code paths, stable CLI surfaces, or workflow/operator guidance.
 - Update `README.md` or the relevant docs when behavior changes.
 - Update `PROJECT_MEMORY.md` if a durable decision changed.
 - Update `PROJECT_STATUS.md` if the work changes the current phase or milestone.
@@ -29,6 +30,7 @@ This repository uses a branch-and-PR workflow.
 - The `release-addon` workflow runs `npm run check:ci` before building the addon archive; the smoke step is portable on GitHub Actions, so release gating does not depend on sibling CLI checkouts being present.
 - Build the addon archive with `npm run addon:build` when you need a local package.
 - Update `CHANGELOG.md` before a tagged release if you want the release notes to reflect the current user-facing slice.
+- Keep `docs/maintenance-operations.md` and `docs/release-process.md` aligned when the maintenance preflight or release preflight changes.
 - See `docs/release-process.md` for the end-to-end release checklist and publish paths.
 - Tag a release commit with a `v*` tag to publish the generated `.mnaddon` as a GitHub Release asset.
 - Use the `release-addon` workflow manually when you want a fresh packaged archive without publishing a tag.
