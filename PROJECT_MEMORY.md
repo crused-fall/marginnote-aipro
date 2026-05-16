@@ -84,8 +84,8 @@ Canonical long-term memory for this repository.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
 - That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
-- When the bridge falls back locally, compact `mnaipro status`, `mnaipro bridge status`, and `mnaipro overview` output surfaces `bridge_offline_reason=...` so the fallback cause stays visible without opening JSON.
-- After the offline-reason hint update, the next low-risk maintenance slice is to decide whether `mnaipro doctor --compact` should mirror the same `bridge_offline_reason` hint for parity.
+- When the bridge falls back locally, compact `mnaipro status`, `mnaipro bridge status`, `mnaipro doctor`, and `mnaipro overview` output surfaces `bridge_offline_reason=...` so the fallback cause stays visible without opening JSON.
+- The offline-reason parity gap in `mnaipro doctor --compact` is now closed; future low-risk maintenance should keep the doctor/status/overview wording aligned if any of those hints change again.
 - Keep docs and release hygiene aligned when a user-visible change lands, especially the status/memory/log trio plus `README.md` and `docs/mnaipro-cli-quickref.md`.
 - Keep product-line and GitHub remote boundaries explicit across the three repos.
 

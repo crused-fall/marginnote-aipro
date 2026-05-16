@@ -153,6 +153,45 @@ async function main() {
       `overview compact should surface the fallback reason\n${offlineOverviewCompact.stdout}`
     );
 
+    const offlineDoctorCompact = await runCli([
+      "--base-url",
+      offlineBaseUrl,
+      "--obsidian-vault-path",
+      tempVaultPath,
+      "doctor",
+      "--compact",
+    ]);
+    assert.strictEqual(
+      offlineDoctorCompact.code,
+      0,
+      `doctor compact should still complete when the bridge falls back locally\n${offlineDoctorCompact.stderr || offlineDoctorCompact.stdout}`
+    );
+    assert(
+      /bridge=offline/.test(offlineDoctorCompact.stdout || "") &&
+        /bridge_offline_reason=/.test(offlineDoctorCompact.stdout || ""),
+      `doctor compact should surface the fallback reason\n${offlineDoctorCompact.stdout}`
+    );
+
+    const offlineBridgeDoctorCompact = await runCli([
+      "--base-url",
+      offlineBaseUrl,
+      "--obsidian-vault-path",
+      tempVaultPath,
+      "bridge",
+      "doctor",
+      "--compact",
+    ]);
+    assert.strictEqual(
+      offlineBridgeDoctorCompact.code,
+      0,
+      `bridge doctor compact should still complete when the bridge falls back locally\n${offlineBridgeDoctorCompact.stderr || offlineBridgeDoctorCompact.stdout}`
+    );
+    assert(
+      /bridge=offline/.test(offlineBridgeDoctorCompact.stdout || "") &&
+        /bridge_offline_reason=/.test(offlineBridgeDoctorCompact.stdout || ""),
+      `bridge doctor compact should surface the fallback reason\n${offlineBridgeDoctorCompact.stdout}`
+    );
+
     process.stdout.write("CLI overview consistency checks OK\n");
   } finally {
     await new Promise((resolve) => server.close(resolve));

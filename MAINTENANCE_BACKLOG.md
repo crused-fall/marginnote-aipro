@@ -10,7 +10,7 @@ It is intentionally operational: pick one item, inspect it, and if a real issue 
 4. Keep durable records aligned after any user-visible change.
 
 ## Current task candidates
-- Review `cli/mnaipro.js` compact `doctor` output for parity with the new `bridge_offline_reason` hint on `status` / `overview`.
+- Review `mnaipro doctor --compact` and `mnaipro bridge doctor --compact` for any remaining wording drift after the offline-reason parity fix.
 - Review `README.md` and `docs/mnaipro-cli-quickref.md` for maintenance-mode, automation, and usability wording consistency.
 - Review `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, and `PROJECT_LOG.md` for record drift after any user-visible change.
 

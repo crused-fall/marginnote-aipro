@@ -82,7 +82,9 @@ The backend reads `MN_MODEL_*` or `MN_BRIDGE_MODEL_*` environment variables for 
 - `launch_agent_missing` means the LaunchAgent plist is not installed
 - `supervisor_running_bridge_unreachable` means launchd has the supervisor, but the HTTP bridge is still not answering
 
-`mnaipro status --compact` and `mnaipro bridge doctor --compact` now also surface the bridge supervisor ownership as `bridge_supervisor=...` and the current tracked pid as `bridge_supervisor_pid=...`, so you can see whether the bridge is spawned, adopted, external, or stopped without opening JSON.
+`mnaipro doctor --compact`, `mnaipro status --compact`, and `mnaipro bridge doctor --compact` now also surface the bridge supervisor ownership as `bridge_supervisor=...` and the current tracked pid as `bridge_supervisor_pid=...`, so you can see whether the bridge is spawned, adopted, external, or stopped without opening JSON.
+
+When the bridge falls back locally, `mnaipro doctor --compact` also surfaces `bridge_offline_reason=...`, matching the fast status and overview surfaces without requiring JSON.
 
 That same doctor output now also carries the Obsidian sync settings summary and expected `data.json` path, so the root bridge diagnostics stay aligned with the standalone Obsidian bridge CLI.
 
