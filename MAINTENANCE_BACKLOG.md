@@ -12,7 +12,7 @@ It is the short queue for `docs/maintenance-operations.md`: pick one item, inspe
 ## Current task candidates
 - Review `mnaipro doctor --compact`, `mnaipro bridge doctor --compact`, and nearby compact surfaces for wording drift after maintenance changes.
 - Verify `npm run check:ci`, `npm run check`, and the relevant smoke/regression scripts still cover the recently touched surfaces.
-- Review `docs/release-process.md` and `CHANGELOG.md` for maintenance-mode and preflight wording consistency before the next release.
+- Review `docs/maintenance-operations.md`, `docs/release-process.md`, and `CHANGELOG.md` together before the next tagged release.
 - Review `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, and `PROJECT_LOG.md` for record drift after any user-visible change.
 
 ## Done for now

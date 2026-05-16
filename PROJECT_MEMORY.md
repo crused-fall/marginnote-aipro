@@ -55,6 +55,7 @@ Canonical long-term memory for this repository.
 - `scripts/check-release-addon-workflow.js` now also asserts that `CHANGELOG.md` has an `Unreleased` section and that the release docs point at it, so the release-note entrypoint stays coupled to the workflow check.
 - The pull request template now prompts contributors to update `CHANGELOG.md` when user-visible behavior changes, keeping release notes and review checklists aligned.
 - `docs/release-process.md` now captures the canonical release checklist and publish paths, and the release workflow check asserts that it keeps the changelog, validation commands, and publish triggers in sync.
+- `docs/release-process.md` now points routine maintenance slices at `docs/maintenance-operations.md`, so the release checklist and the maintenance cadence use the same documented preflight.
 - Phase 7 release hardening is complete on `main` after PR #4 merged; the stable public release path now explicitly centers `CHANGELOG.md`, `docs/release-process.md`, the PR checklist, and the CI-safe smoke gate.
 - Phase 8 optional expansion completed with `mnaipro operator` as a thin launcher layer above the stable CLI surfaces, not as a hidden dependency inside them.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
@@ -103,6 +104,7 @@ Canonical long-term memory for this repository.
 - Keep the three product lines isolated: `mnaipro`, `marginnote-cli`, and `mn-obsidian-bridge`.
 - Keep the CI-safe validation ladder green, especially `npm run check:ci` and `npm run check`, and rerun the narrow smoke checks after documentation or behavior changes.
 - Keep `CHANGELOG.md` updated for user-visible changes and keep generated artifacts out of version control.
+- Keep `docs/release-process.md` and `docs/maintenance-operations.md` aligned so the tagged-release path and the maintenance preflight do not diverge.
 - Keep archived planning docs clearly historical so they do not read like active work items.
 
 ## Prioritized backlog

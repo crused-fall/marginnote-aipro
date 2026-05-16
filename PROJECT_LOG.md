@@ -69,6 +69,7 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The long-term maintenance operating model was then codified in `docs/maintenance-operations.md`, so the automation-first cadence, priority order, and record-sync rules now live in a durable runbook.
 - `MAINTENANCE_BACKLOG.md` was tightened again so it stays a short queue of concrete checks, and the README now points maintainers at the runbook instead of leaving the process implicit.
 - `docs/mnaipro-cli-quickref.md` and `docs/bridge-ops-quickstart.md` now point at the same runbook too, so the maintenance guidance is visible from the CLI quickref and bridge quickstart as well as the README.
+- `docs/release-process.md` and `CHANGELOG.md` were then brought into the same maintenance-preflight story, so release notes, release checks, and the runbook now tell one consistent story about when to run `npm run check` and `npm run addon:build`.
 
 ## Thread Index
 
