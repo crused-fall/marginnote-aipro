@@ -74,6 +74,13 @@ Canonical long-term memory for this repository.
 - Keep expanding the standalone CLI surfaces so MarginNote native capabilities, the plugin workflow, and the Obsidian bridge stay separated and testable.
 - Keep the bridge model backend provider-agnostic by default, with dry-run as the safe preview path and explicit configuration required before real execution.
 
+## Automation-facing next slices
+- The heartbeat automation should read this section first before choosing work.
+- The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: refine first-pass color ranking and pruning only when a regression or smoke case shows a concrete gap.
+- A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
+- Keep docs and release hygiene aligned when a user-visible change lands, especially the status/memory/log trio plus `README.md` and `docs/mnaipro-cli-quickref.md`.
+- Keep product-line and GitHub remote boundaries explicit across the three repos.
+
 ## Remaining functional gaps
 - The visual organization surface is still intentionally conservative; broader styling is not finished beyond the current role-based first pass and the small stale-color correction now allowed for visibly important notes.
 - Structural edits beyond note-local content and metadata writes are still not a stable public surface in the raw helper shell; parent/child rewrites, canvas dragging, and direct layout changes remain suggestion-only or experimental.

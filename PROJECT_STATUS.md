@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-05-12
+Last updated: 2026-05-16
 
 ## Current state
 - Maintenance-only mode is in effect on `main`; phase 7 release hardening and the phase 8 optional expansion are both complete.
@@ -19,6 +19,11 @@ Last updated: 2026-05-12
 - `npm run cli:smoke:portable` exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
 - The pull request template prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
 - `docs/release-process.md` exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
+
+## Next work candidates
+- The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: keep refining first-pass color ranking and pruning only when a concrete regression or smoke case shows a real gap.
+- A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
+- Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.

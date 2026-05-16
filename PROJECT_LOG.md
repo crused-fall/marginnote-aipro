@@ -1,6 +1,6 @@
 # Project Log
 
-Last updated: 2026-05-12
+Last updated: 2026-05-16
 
 This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4276db8e` is a fork of `019d6b92-996c-7523-a2ae-90cd26d10fa5`, so those two belong to the same mainline.
 
@@ -50,6 +50,12 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
   - phase 7 release hardening is complete
   - the live work had crossed the phase 8 optional expansion boundary and returned to maintenance / new-slice territory
   - there was no remaining phase 8 operator/tooling work to finish
+
+### 2026-05-16
+
+- The current state and todo list were rechecked, and the remaining work was distilled into an explicit next-slices backlog for the heartbeat automation.
+- The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish; deeper structural edits remain a separate future experimental track.
+- The automation now reads that backlog directly, so later check-ins can select work from the documented list instead of re-deriving it every time.
 
 ## Thread Index
 
