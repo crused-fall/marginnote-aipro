@@ -1,7 +1,7 @@
 # Maintenance Backlog
 
 This file gives the heartbeat automation a concrete set of low-risk maintenance tasks to choose from.
-It is intentionally operational: pick one item, inspect it, and if a real issue exists, fix the smallest safe slice.
+It is the short queue for `docs/maintenance-operations.md`: pick one item, inspect it, and if a real issue exists, fix the smallest safe slice.
 
 ## Priority order
 1. Review the most recently changed code surfaces for regressions or behavior drift.
@@ -10,8 +10,9 @@ It is intentionally operational: pick one item, inspect it, and if a real issue 
 4. Keep durable records aligned after any user-visible change.
 
 ## Current task candidates
-- Review `mnaipro doctor --compact` and `mnaipro bridge doctor --compact` for any remaining wording drift after the offline-reason parity fix.
-- Review `README.md` and `docs/mnaipro-cli-quickref.md` for maintenance-mode, automation, and usability wording consistency.
+- Review `mnaipro doctor --compact`, `mnaipro bridge doctor --compact`, and nearby compact surfaces for wording drift after maintenance changes.
+- Review `README.md`, `docs/mnaipro-cli-quickref.md`, and `docs/bridge-ops-quickstart.md` for maintenance-mode, automation, and usability wording consistency.
+- Verify `npm run check:ci`, `npm run check`, and the relevant smoke/regression scripts still cover the recently touched surfaces.
 - Review `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, and `PROJECT_LOG.md` for record drift after any user-visible change.
 
 ## Done for now

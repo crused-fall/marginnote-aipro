@@ -16,6 +16,7 @@ Canonical long-term memory for this repository.
 - Small, verified fixes can go straight to `main`.
 - Medium and larger slices should use a short-lived branch and Draft PR.
 - The repository is in maintenance-only mode on `main`; phase 7 and phase 8 are complete.
+- The long-term maintenance operating model lives in `docs/maintenance-operations.md`; `MAINTENANCE_BACKLOG.md` is the short queue, not the source of truth.
 - Long-term target state belongs in `PROJECT_MEMORY.md`.
 - Current phase / milestone tracking belongs in `PROJECT_STATUS.md`.
 - Repo-specific operating rules belong in `AGENTS.md`.
@@ -79,6 +80,7 @@ Canonical long-term memory for this repository.
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
 - Prioritize stability/compatibility hardening, UI/usability improvements, code-review sweeps, and small bug-fix slices before any further feature-style polish.
+- Read `docs/maintenance-operations.md` first, then `MAINTENANCE_BACKLOG.md`; the runbook sets the cadence, priority order, and record-sync rules.
 - When safe maintenance work exists, the heartbeat should stay in a sustained work block for at least 10 minutes, preferably 15-20 minutes or more, before stopping, unless it has already completed and verified a concrete safe slice.
 - Read `MAINTENANCE_BACKLOG.md` after the durable records and before deciding on a task; it contains the explicit low-risk maintenance checks the heartbeat should prefer.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
@@ -96,6 +98,7 @@ Canonical long-term memory for this repository.
 
 ## Maintenance backlog
 - The explicit maintenance task list lives in `MAINTENANCE_BACKLOG.md`.
+- The durable maintenance policy lives in `docs/maintenance-operations.md`, and the backlog should stay short enough to support a quick heartbeat decision.
 - Keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and the quick reference aligned whenever shipped behavior or the maintenance boundary changes.
 - Keep the three product lines isolated: `mnaipro`, `marginnote-cli`, and `mn-obsidian-bridge`.
 - Keep the CI-safe validation ladder green, especially `npm run check:ci` and `npm run check`, and rerun the narrow smoke checks after documentation or behavior changes.

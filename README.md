@@ -3,6 +3,7 @@
 This repository contains the MarginNote AI plugin, CLI, and bridge surfaces for a more agent-like workflow.
 
 The repo is in maintenance-only mode on `main`: phase 7 release hardening and the phase 8 optional expansion are complete, and the durable records now document shipped behavior rather than active roadmap work.
+The long-term maintenance operating model lives in `docs/maintenance-operations.md`, and `MAINTENANCE_BACKLOG.md` stays as the short queue of concrete checks.
 
 The product goal covers both structural cleanup and selective visual cleanup, such as controlled card-color changes that help a branch read more clearly in the mind map.
 
@@ -51,6 +52,8 @@ It is split into two parts:
   Design notes, capability boundaries, and the next implementation steps.
 - `docs/ohmymn-integration.md`
   Notes on how to wire this into an OhMyMN or similar addon shell.
+- `docs/maintenance-operations.md`
+  Long-term maintenance cadence, priority levels, and record-sync rules.
 - `docs/native-ai-supervision-matrix.md`
   A v1 decision matrix for which native MarginNote AI capabilities we should mirror, supervise, augment, or avoid hooking directly.
 
