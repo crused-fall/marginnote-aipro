@@ -137,6 +137,10 @@ function sortActions(actions, noteOrderMap) {
     const phaseDelta = actionPhasePriority(left.phase) - actionPhasePriority(right.phase);
     if (phaseDelta !== 0) return phaseDelta;
 
+    if (left.type === "set_color_index" && right.type === "set_color_index") {
+      return compareVisualColorActions(left, right, noteOrderMap);
+    }
+
     const noteDelta =
       (noteOrderMap.get(left.noteId) ?? Number.MAX_SAFE_INTEGER) -
       (noteOrderMap.get(right.noteId) ?? Number.MAX_SAFE_INTEGER);
@@ -1047,6 +1051,35 @@ function visualRolePriority(action) {
 
 function visualColorCorrectionPriority(action) {
   return typeof action?.currentColorIndex === "number" && action.currentColorIndex > 0 ? 0 : 1;
+}
+
+function compareVisualColorActions(left, right, noteOrderMap) {
+  const leftSummary = compactText(left && left.visualRole) === "summary_branch";
+  const rightSummary = compactText(right && right.visualRole) === "summary_branch";
+  if (leftSummary !== rightSummary) {
+    return leftSummary ? -1 : 1;
+  }
+
+  const correctionDelta = visualColorCorrectionPriority(left) - visualColorCorrectionPriority(right);
+  if (correctionDelta !== 0) return correctionDelta;
+
+  const roleDelta = visualRolePriority(left) - visualRolePriority(right);
+  if (roleDelta !== 0) return roleDelta;
+
+  const salienceDelta = (right.visualSalience || 0) - (left.visualSalience || 0);
+  if (salienceDelta !== 0) return salienceDelta;
+
+  const confidenceDelta = (right?.meta?.confidence || 0) - (left?.meta?.confidence || 0);
+  if (confidenceDelta !== 0) return confidenceDelta;
+
+  if (noteOrderMap instanceof Map) {
+    const noteDelta =
+      (noteOrderMap.get(left.noteId) ?? Number.MAX_SAFE_INTEGER) -
+      (noteOrderMap.get(right.noteId) ?? Number.MAX_SAFE_INTEGER);
+    if (noteDelta !== 0) return noteDelta;
+  }
+
+  return String(left.noteId || "").localeCompare(String(right.noteId || ""));
 }
 
 function pruneExcessColorActions(actions, notes, stage, locale) {

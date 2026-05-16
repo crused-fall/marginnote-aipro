@@ -867,6 +867,11 @@ function validateColorPolicy(actions) {
   const nonSummaryColorActions = actions.filter(
     (action) => action.type === "set_color_index" && action.visualRole !== "summary_branch"
   );
+  const colorActions = actions.filter((action) => action.type === "set_color_index");
+  assert(
+    colorActions.length > 0 && colorActions[0].visualRole === "summary_branch",
+    "summary branch color should stay first in the primary sample plan"
+  );
   assert(
     nonSummaryColorActions.length <= 3,
     `too many non-summary color actions in primary sample plan: ${nonSummaryColorActions.length}`
@@ -914,6 +919,7 @@ function validateHiddenColorSkip(plan) {
 
 function validateVisibleColorRetention(plan) {
   const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  const colorActions = actions.filter((action) => action.type === "set_color_index");
   const retainedRecolor = actions.find(
     (action) => action.type === "set_color_index" && action.noteId === "z-1"
   );
@@ -924,6 +930,10 @@ function validateVisibleColorRetention(plan) {
   assert(
     actions.filter((action) => action.type === "set_color_index").length === 3,
     "visible recolor regression should still prune the set down to the primary limit"
+  );
+  assert(
+    colorActions[0] && colorActions[0].noteId === "z-1",
+    "visible recolor should be surfaced before fresh color suggestions"
   );
 }
 

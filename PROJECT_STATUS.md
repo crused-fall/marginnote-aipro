@@ -11,6 +11,7 @@ Last updated: 2026-05-16
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
 - The safe visual-strategy slice now keeps visible stale-color corrections available for salient notes while skipping hidden or deep-offscreen non-summary notes, and the regression suite covers both branches.
 - When the first-pass color surface needs pruning, visible recolors now stay ahead of fresh color suggestions so explicit corrections survive the limit.
+- The visual-strategy preview order now also surfaces retained recolors before fresh color suggestions, while keeping summary-branch colors first.
 - Fresh visible color suggestions now also stay conservative: if a visible note has no existing color correction need and the shape signal is weak, it is excluded from the first-pass color surface.
 - The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
 - `npm run check:ci` runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
@@ -22,6 +23,7 @@ Last updated: 2026-05-16
 
 ## Next work candidates
 - The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: keep refining first-pass color ranking and pruning only when a concrete regression or smoke case shows a real gap.
+- That visual-strategy polish now also keeps the preview ordering aligned with the correction-first ranking, so future work can stay on deeper shape heuristics rather than re-litigating action order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 
@@ -91,3 +93,6 @@ Last updated: 2026-05-16
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental status --json`
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental diagnostics --json`
 - `MNAIPRO_EXPERIMENTAL=1 node cli/mnaipro.js experimental registry --json`
+- `node scripts/check-planner-invariants.js`
+- `npm run check:ci`
+- `npm run check`

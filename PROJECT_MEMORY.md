@@ -32,6 +32,7 @@ Canonical long-term memory for this repository.
 - `mnaipro replay latest` and `mnaipro replay after-apply` now surface the same strategy-pack and branch-overview summary in offline replay, so cached-request replay and after-apply replay stay aligned with live follow-up vocabulary.
 - `mnaipro` non-summary color correction stays gated by visibility and shape salience: visible notes can still be recolored when the role signal is strong enough, but hidden or deep-offscreen non-summary notes stay out of the first-pass color surface.
 - If the first-pass color surface is over capacity, visible recolors that are correcting an existing color stay ahead of fresh color suggestions so explicit fixes are not pruned away.
+- The visual-strategy preview order also follows that same correction-first rule, while preserving summary-branch colors as the first visible structural cue.
 - Fresh visible color suggestions stay conservative as well: if a visible note has no existing color correction need and the shape signal is weak, it stays out of the first-pass color surface.
 - `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` are the opt-in experimental surfaces for the plugin/agent CLI; they stay hidden until `MNAIPRO_EXPERIMENTAL=1` is set, and when enabled they report the experimental gate state, latest diagnostic evidence, and gated command registry without changing the stable surface.
 - `bridge/model-backend.js` is a provider-agnostic execution surface with preview/dry-run default behavior, trace persistence, replay hooks, and `/model/run`, `/model/replay`, and `/model/latest` endpoints.
@@ -77,6 +78,7 @@ Canonical long-term memory for this repository.
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
 - The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: refine first-pass color ranking and pruning only when a regression or smoke case shows a concrete gap.
+- That polish now also includes preview ordering for color actions, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
 - Keep docs and release hygiene aligned when a user-visible change lands, especially the status/memory/log trio plus `README.md` and `docs/mnaipro-cli-quickref.md`.
 - Keep product-line and GitHub remote boundaries explicit across the three repos.
