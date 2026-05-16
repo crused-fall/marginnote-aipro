@@ -67,6 +67,7 @@ Canonical long-term memory for this repository.
 - If a decision changes, update this file first.
 - If a work item changes the current phase, update `PROJECT_STATUS.md` in the same change.
 - When a slice is complete, commit it immediately without asking for confirmation.
+- GitHub remote publishes, pushes, merges, and branch cleanup do not need a separate user confirmation once the target repo, branch, and checks are clear.
 - Update the relevant memory/status/log files in the same change before moving on to the next slice.
 
 ## Current long-term direction
