@@ -1,8 +1,10 @@
 # MarginNote Agent Plugin Starter
 
-This repository is a pragmatic starter for turning MarginNote AI into a more agent-like workflow.
+This repository contains the MarginNote AI plugin, CLI, and bridge surfaces for a more agent-like workflow.
 
-The product goal now explicitly includes both structural cleanup and selective visual cleanup, such as controlled card-color changes that help a branch read more clearly in the mind map.
+The repo is in maintenance-only mode on `main`: phase 7 release hardening and the phase 8 optional expansion are complete, and the durable records now document shipped behavior rather than active roadmap work.
+
+The product goal covers both structural cleanup and selective visual cleanup, such as controlled card-color changes that help a branch read more clearly in the mind map.
 
 It is split into two parts:
 
@@ -24,6 +26,7 @@ It is split into two parts:
   The bridge protocol is intentionally kept thin enough that separate command-line tools can reuse the same evidence model without sharing runtime:
   - `mnaipro` stays the CLI for this plugin / agent workflow.
   - `mnaipro capabilities` exposes the current command registry and capability groups in a stable JSON/text shape.
+  - `mnaipro operator` is the thin launcher that recommends the next stable `mnaipro` command and can run it with `--run`, while preserving explicit bridge and vault context for the launched command.
   - `mnaipro request get|post` exposes raw bridge passthrough, including the model backend endpoints when you need direct inspection or replay.
   - `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` are opt-in surfaces that stay hidden until `MNAIPRO_EXPERIMENTAL=1` is set; they report the experimental gate state, latest diagnostic evidence, and gated command registry without changing stable behavior.
   - `marginnote-cli` is the standalone read-write CLI for MarginNote native capabilities, with a stable `capabilities` registry command, a shared `surfaceDocs` command-surface catalog, plus patch-compatible or restorable native AI preference snapshots and supported `ai preferences export|restore|set|patch|reset` flows.

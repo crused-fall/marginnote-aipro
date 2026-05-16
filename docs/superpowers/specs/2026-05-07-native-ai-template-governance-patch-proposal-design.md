@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** complete. This spec describes the shipped read-only `patchExport` surface and is retained as a historical design record.
+
 **Goal:** turn the existing MarginNote native AI template governance report into a deterministic, read-only patch proposal surface that exports safe normalization edits without adding any write path.
 
 **Architecture:** keep `scripts/inspect-native-ai-templates.js` as the user-facing entrypoint, keep `bridge/native-ai-template-governance.js` as the rule engine, and extend the report with a structured `patchExport` object derived only from already-safe prompt whitespace normalization. Semantic issues such as generic content prompts, duplicate fingerprints, or weak field coverage remain recommendations and warnings, not patches.

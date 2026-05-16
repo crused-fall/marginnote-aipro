@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** complete. The patch export surface landed on `main`; this plan is retained as a historical implementation record.
+
 **Goal:** add a deterministic, read-only `patchExport` surface to the existing native AI template governance report so whitespace-only prompt normalization can be exported as a safe preview artifact.
 
 **Architecture:** keep the rule engine in `bridge/native-ai-template-governance.js`, keep the user-facing command in `scripts/inspect-native-ai-templates.js`, and keep regression coverage in `scripts/check-native-ai-template-governance.js`. The new surface is report-only: it must not write templates back to MarginNote, and semantic template quality issues remain warnings/recommendations rather than patch proposals.
@@ -196,4 +198,3 @@ npm run check
 - Placeholder scan: no TODO/TBD placeholders remain in the plan text.
 - Type consistency: `patchExport`, `proposals`, `summary`, `buildTemplateReport`, and `renderText` are used consistently across tasks.
 - Scope check: the plan stays read-only and does not add any write/apply path.
-

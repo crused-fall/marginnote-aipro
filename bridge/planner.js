@@ -975,18 +975,28 @@ function buildColorAction(node, nodeMap, locale) {
 
   const nextColorIndex = VISUAL_ROLE_COLOR_INDEX[role];
   if (typeof nextColorIndex !== "number") return null;
-  if (typeof node.colorIndex === "number" && node.colorIndex === nextColorIndex) {
+  const currentColor = typeof node.colorIndex === "number" ? node.colorIndex : null;
+  if (currentColor === nextColorIndex) {
     return null;
   }
-  if (typeof node.colorIndex === "number" && node.colorIndex > 0 && role !== "summary_branch") {
+  const shapeContext = buildColorShapeContext(node, nodeMap, locale);
+  const hasExistingColor = currentColor !== null && currentColor > 0;
+  if (role !== "summary_branch" && !node.visibleInMindMap) {
     return null;
   }
-
+  if (role !== "summary_branch" && !hasExistingColor && shapeContext.salience < 3) {
+    return null;
+  }
+  if (hasExistingColor && role !== "summary_branch") {
+    const shouldRecolor = !!node.visibleInMindMap && shapeContext.salience >= 2;
+    if (!shouldRecolor) {
+      return null;
+    }
+  }
   const localizedRole = localizeTopicLabel(
     role === "summary_branch" ? "summary" : role,
     locale
   );
-  const shapeContext = buildColorShapeContext(node, nodeMap, locale);
   const evidence = [
     role === "summary_branch"
       ? locale === "zh"
@@ -1000,12 +1010,20 @@ function buildColorAction(node, nodeMap, locale) {
       : `Suggested color index ${nextColorIndex}`,
     ...shapeContext.evidence,
   ];
+  if (currentColor !== null && currentColor !== nextColorIndex) {
+    evidence.push(
+      locale === "zh"
+        ? `当前颜色索引 ${currentColor} 与建议颜色不同`
+        : `Current color index ${currentColor} differs from the suggested role color`
+    );
+  }
 
   return {
     type: "set_color_index",
     noteId: node.noteId,
     visualRole: role,
     visualSalience: shapeContext.salience,
+    currentColorIndex: currentColor,
     colorIndex: nextColorIndex,
     reason:
       locale === "zh"
@@ -1027,6 +1045,10 @@ function visualRolePriority(action) {
   return 99;
 }
 
+function visualColorCorrectionPriority(action) {
+  return typeof action?.currentColorIndex === "number" && action.currentColorIndex > 0 ? 0 : 1;
+}
+
 function pruneExcessColorActions(actions, notes, stage, locale) {
   if (stage !== "primary") {
     return Array.isArray(actions) ? [...actions] : [];
@@ -1043,6 +1065,9 @@ function pruneExcessColorActions(actions, notes, stage, locale) {
   const keepKeys = new Set(
     [...nonSummaryColorActions]
       .sort((left, right) => {
+        const correctionDelta =
+          visualColorCorrectionPriority(left) - visualColorCorrectionPriority(right);
+        if (correctionDelta !== 0) return correctionDelta;
         const salienceDelta = (right.visualSalience || 0) - (left.visualSalience || 0);
         if (salienceDelta !== 0) return salienceDelta;
         const priorityDelta = visualRolePriority(left) - visualRolePriority(right);

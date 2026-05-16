@@ -978,7 +978,7 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities command count exposed',
-      mnaiproCapabilities.commandCount === 21,
+      mnaiproCapabilities.commandCount === 22,
       {
         commandCount: mnaiproCapabilities.commandCount || 0,
         topLevelCount: mnaiproCapabilities.topLevelCount || 0,
@@ -1025,9 +1025,9 @@ async function main() {
     ensure(
       report,
       'mnaipro capabilities compact exposes summary',
-      /commands=21/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
+      /commands=22/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
         /groups=8/.test(mnaiproCapabilitiesCompactResult.stdout || '') &&
-        /topLevel=12/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
+        /topLevel=13/.test(mnaiproCapabilitiesCompactResult.stdout || ''),
       { stdout: mnaiproCapabilitiesCompactResult.stdout || '' }
     );
 
@@ -1140,6 +1140,121 @@ async function main() {
       /kind=overview/.test(mnaiproOverviewCompactResult.stdout || '') &&
         /next=mnaipro doctor --json/.test(mnaiproOverviewCompactResult.stdout || ''),
       { stdout: mnaiproOverviewCompactResult.stdout || '' }
+    );
+
+    const mnaiproOperatorResult = runCommand(
+      'mnaipro operator',
+      mnaiproCli,
+      ['--base-url', temporaryBaseUrl, '--obsidian-vault-path', report.roots.vaultPath, 'operator', '--json'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    const mnaiproOperator = parseJson('mnaipro operator', mnaiproOperatorResult.stdout);
+    report.commands.push(summarizeCommand(mnaiproOperatorResult, mnaiproOperator));
+    ensure(report, 'mnaipro operator ok', mnaiproOperator.ok === true, { kind: mnaiproOperator.kind });
+    ensure(report, 'mnaipro operator kind exposed', mnaiproOperator.kind === 'operator', {
+      kind: mnaiproOperator.kind,
+    });
+    ensure(
+      report,
+      'mnaipro operator recommendation exposed',
+      typeof mnaiproOperator.recommendedCommand === 'string' &&
+        mnaiproOperator.recommendedCommand.length > 0 &&
+        Array.isArray(mnaiproOperator.recommendedArgs) &&
+        mnaiproOperator.recommendedArgs.length > 0,
+      {
+        recommendedCommand: mnaiproOperator.recommendedCommand || null,
+        recommendationSource: mnaiproOperator.recommendationSource || null,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro operator nested overview exposed',
+      mnaiproOperator.overview &&
+        mnaiproOperator.overview.kind === 'overview' &&
+        mnaiproOperator.overview.status &&
+        mnaiproOperator.overview.doctor &&
+        mnaiproOperator.overview.capabilities,
+      { overview: mnaiproOperator.overview || null }
+    );
+    ensure(
+      report,
+      'mnaipro operator nested overview bridge live',
+      mnaiproOperator.overview &&
+        mnaiproOperator.overview.highlights &&
+        mnaiproOperator.overview.highlights.bridgeLive === true,
+      { overview: mnaiproOperator.overview || null }
+    );
+    const mnaiproOperatorCompactResult = runCommand(
+      'mnaipro operator --compact',
+      mnaiproCli,
+      ['--base-url', temporaryBaseUrl, '--obsidian-vault-path', report.roots.vaultPath, 'operator', '--compact'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro operator compact exposes recommendation',
+      /kind=operator/.test(mnaiproOperatorCompactResult.stdout || '') &&
+        /bridge=live/.test(mnaiproOperatorCompactResult.stdout || '') &&
+        /next=mnaipro /.test(mnaiproOperatorCompactResult.stdout || '') &&
+        /mode=preview/.test(mnaiproOperatorCompactResult.stdout || ''),
+      { stdout: mnaiproOperatorCompactResult.stdout || '' }
+    );
+    const mnaiproOperatorRunResult = runCommand(
+      'mnaipro operator --run',
+      mnaiproCli,
+      ['--base-url', temporaryBaseUrl, '--obsidian-vault-path', report.roots.vaultPath, 'operator', '--run', '--json'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    const mnaiproOperatorRun = parseJson('mnaipro operator --run', mnaiproOperatorRunResult.stdout);
+    report.commands.push(summarizeCommand(mnaiproOperatorRunResult, mnaiproOperatorRun));
+    ensure(report, 'mnaipro operator run ok', mnaiproOperatorRun.ok === true, { kind: mnaiproOperatorRun.kind });
+    ensure(
+      report,
+      'mnaipro operator run execution exposed',
+      mnaiproOperatorRun.execution && typeof mnaiproOperatorRun.execution.exitCode === 'number',
+      { execution: mnaiproOperatorRun.execution || null }
+    );
+    ensure(
+      report,
+      'mnaipro operator run execution passed inherited context',
+      Array.isArray(mnaiproOperatorRun.execution && mnaiproOperatorRun.execution.commandArgs) &&
+        mnaiproOperatorRun.execution.commandArgs[0] === '--base-url' &&
+        mnaiproOperatorRun.execution.commandArgs[1] === temporaryBaseUrl &&
+        mnaiproOperatorRun.execution.commandArgs[2] === '--obsidian-vault-path' &&
+        mnaiproOperatorRun.execution.commandArgs[3] === report.roots.vaultPath,
+      { execution: mnaiproOperatorRun.execution || null }
+    );
+    ensure(
+      report,
+      'mnaipro operator run execution exited cleanly',
+      mnaiproOperatorRun.execution && mnaiproOperatorRun.execution.exitCode === 0,
+      { execution: mnaiproOperatorRun.execution || null }
+    );
+    const mnaiproOperatorRunCompactResult = runCommand(
+      'mnaipro operator --run --compact',
+      mnaiproCli,
+      ['--base-url', temporaryBaseUrl, '--obsidian-vault-path', report.roots.vaultPath, 'operator', '--run', '--compact'],
+      {
+        MN_AGENT_REPORTS_DIR: temporaryBreakdownArtifacts.reportsDir,
+        MN_AGENT_REQUESTS_DIR: temporaryBreakdownArtifacts.requestsDir,
+      }
+    );
+    ensure(
+      report,
+      'mnaipro operator run compact exposes execution mode',
+      /kind=operator/.test(mnaiproOperatorRunCompactResult.stdout || '') &&
+        /mode=execute/.test(mnaiproOperatorRunCompactResult.stdout || '') &&
+        /exitCode=0/.test(mnaiproOperatorRunCompactResult.stdout || ''),
+      { stdout: mnaiproOperatorRunCompactResult.stdout || '' }
     );
 
     const mnaiproFollowupResult = runCommand(

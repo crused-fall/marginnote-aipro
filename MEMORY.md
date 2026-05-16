@@ -2,6 +2,7 @@
 
 Canonical long-term memory now lives in `PROJECT_MEMORY.md`.
 Current phase tracking lives in `PROJECT_STATUS.md`.
+This archive is historical only; the repository is in maintenance-only mode and the live state is recorded in the project memory/status files.
 
 Last updated: 2026-05-07
 
@@ -422,17 +423,14 @@ We are not trying to build:
 - Added isolated real-apply smoke coverage for both standalone CLIs: `marginnote-cli` now honors `--preference-domain` during native-AI inspection, which lets the smoke test write to a temporary defaults domain and read the value back safely; `mn-obsidian-bridge` now gets the same style of temporary-vault apply/readback verification.
 - Added repo-local smoke entrypoints to both standalone CLIs so they can self-verify without going through the root project harness: `marginnote-cli` now has `npm run smoke` using a temporary defaults domain, and `mn-obsidian-bridge` now has `npm run smoke` using a temporary vault and settings file.
 
-## Next Recommended Milestones
+## Archived Follow-ons
 
-1. Capture a dedicated live Breakdown branch snapshot through the proxy-aware `mnaipro breakdown postprocess` wrapper and use it to tune the grouped branch-overview heuristics if the live sample differs from the proxy baseline.
-2. Decide whether template governance should next produce auto-normalized template patches or stay recommendation-only for safety.
-3. Continue expanding `marginnote-cli` toward broader MarginNote-native read/write coverage, while keeping `mnaipro` focused on the plugin / agent workflow and `mn-obsidian-bridge` as the separate bridge diagnostics/write CLI.
-4. Decide when to introduce a real model provider into the bridge, and how much deterministic planning should remain in front of it for auditability and replay.
-5. Extend the new `marginnote` Codex skill only if routing needs become more specific. Keep it a thin dispatcher: native MarginNote tasks -> `marginnote-cli`, plugin/agent tasks -> `mnaipro`, bridge tasks -> `mn-obsidian-bridge`.
+- No active milestones remain in this archive; the items below are preserved only as historical context.
+- The considered follow-ups were Breakdown branch snapshot tuning, template patching, CLI growth, bridge provider selection, and skill routing.
 
-## Open Questions
+## Archived Questions
 
-- Which model provider should power the bridge in the first real version?
+- None.
 
 ## Update Rule
 

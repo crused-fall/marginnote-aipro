@@ -35,6 +35,7 @@ const {
 } = require("../bridge/experimental/registry");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
+const MNAIPRO_BIN = path.join(ROOT_DIR, "bin", "mnaipro.js");
 const DEFAULT_BASE_URL = process.env.MN_AGENT_BASE_URL || "http://127.0.0.1:8765";
 const DEFAULT_OBSIDIAN_VAULT_PATH =
   process.env.MN_OBSIDIAN_VAULT_PATH || "/Users/cfall/Documents/Obsidian-vaults/Proactive_info_base";
@@ -154,11 +155,31 @@ function safeRead(filePath) {
 
 function tailLines(filePath, count) {
   if (!fs.existsSync(filePath)) return [];
-  return fs
-    .readFileSync(filePath, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .slice(-count);
+  const targetCount = Math.max(1, Number(count) || 0);
+  const stat = fs.statSync(filePath);
+  if (!stat.size) return [];
+
+  const maxBytes = Math.min(stat.size, 1024 * 1024);
+  const start = Math.max(0, stat.size - maxBytes);
+  const buffer = Buffer.allocUnsafe(maxBytes);
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, start);
+    let text = buffer.toString("utf8", 0, bytesRead);
+    if (start > 0) {
+      const firstNewline = text.indexOf("\n");
+      if (firstNewline >= 0) {
+        text = text.slice(firstNewline + 1);
+      }
+    }
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean)
+      .slice(-targetCount);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function jsonFileList(dirPath, filter) {
@@ -1361,6 +1382,7 @@ async function buildOverviewReport(program, options = {}) {
 
   const recommendedCommands = [
     "mnaipro doctor --json",
+    "mnaipro operator --json",
     "mnaipro status --json",
     "mnaipro capabilities --json",
     statusReport.breakdownNextCommand || "mnaipro breakdown artifacts --json",
@@ -1401,6 +1423,227 @@ async function buildOverviewReport(program, options = {}) {
       capabilities: capabilitiesReport,
     },
   };
+}
+
+function buildOperatorRecommendation(overviewReport) {
+  const highlights = overviewReport && overviewReport.highlights ? overviewReport.highlights : {};
+  const status = overviewReport && overviewReport.status ? overviewReport.status : null;
+
+  if (!highlights.bridgeLive || !highlights.bridgeReachable) {
+    return {
+      command: "mnaipro bridge doctor --compact",
+      args: ["bridge", "doctor", "--compact"],
+      reason:
+        "The local bridge is not reachable, so the recovery-oriented bridge doctor check is the most useful next step.",
+      source: "bridge_unreachable",
+    };
+  }
+
+  if (!highlights.breakdownComplete) {
+    return {
+      command: "mnaipro breakdown artifacts --json",
+      args: ["breakdown", "artifacts", "--json"],
+      reason:
+        "The Breakdown artifact chain is not complete, so the cache audit is the next stable command to inspect.",
+      source: "breakdown_incomplete",
+    };
+  }
+
+  if (!highlights.followupApplyVisible) {
+    return {
+      command: "mnaipro followup apply latest --json",
+      args: ["followup", "apply", "latest", "--json"],
+      reason:
+        "The follow-up apply artifact is missing, so the latest follow-up apply snapshot is the next stable check.",
+      source: "followup_apply_missing",
+    };
+  }
+
+  if (!(status && status.modelBackend) || !highlights.modelBackendVisible) {
+    return {
+      command: "mnaipro doctor --json",
+      args: ["doctor", "--json"],
+      reason:
+        "The model-backend evidence is missing or incomplete, and the doctor report carries the fuller local health snapshot.",
+      source: "model_backend_missing",
+    };
+  }
+
+  if (!(status && status.obsidianSyncSettings) || !highlights.obsidianSettingsVisible) {
+    return {
+      command: "mnaipro doctor --json",
+      args: ["doctor", "--json"],
+      reason:
+        "The Obsidian sync settings evidence is missing or incomplete, and the doctor report carries the fuller vault snapshot.",
+      source: "obsidian_settings_missing",
+    };
+  }
+
+  return {
+    command: "mnaipro overview --json",
+    args: ["overview", "--json"],
+    reason:
+      "The stable public surfaces look healthy, so the top-level overview is the best next command.",
+    source: "healthy",
+  };
+}
+
+async function buildOperatorReport(program, options = {}) {
+  const overview = await buildOverviewReport(program, options);
+  const recommendation = buildOperatorRecommendation(overview);
+  const runMode = options.run ? "execute" : "preview";
+  const summary = `${overview.summary || "Operator launcher"}; next=${recommendation.command}`;
+
+  return {
+    ok: true,
+    kind: "operator",
+    title: "mnaipro operator",
+    summary,
+    source: overview.source || "unknown",
+    baseUrl: options.baseUrl || DEFAULT_BASE_URL,
+    obsidianVaultPath: options.obsidianVaultPath || DEFAULT_OBSIDIAN_VAULT_PATH,
+    runMode,
+    overview,
+    recommendedCommand: recommendation.command,
+    recommendedArgs: recommendation.args,
+    recommendationSource: recommendation.source,
+    reason: recommendation.reason,
+    nextCommand: recommendation.command,
+    execution: null,
+  };
+}
+
+function buildOperatorInvocationArgs(report, options = {}) {
+  const args = [];
+  const baseUrl = options.baseUrl || report.baseUrl || null;
+  const obsidianVaultPath = options.obsidianVaultPath || report.obsidianVaultPath || null;
+
+  if (baseUrl) {
+    args.push("--base-url", baseUrl);
+  }
+
+  if (obsidianVaultPath) {
+    args.push("--obsidian-vault-path", obsidianVaultPath);
+  }
+
+  if (Array.isArray(report.recommendedArgs)) {
+    args.push(...report.recommendedArgs);
+  }
+
+  return args;
+}
+
+function formatOperatorLines(report) {
+  const lines = [
+    `Operator summary: ${report.summary || "(none)"}`,
+    `Recommended command: ${report.recommendedCommand || "(none)"}`,
+    `Recommendation source: ${report.recommendationSource || "unknown"}`,
+    `Run mode: ${report.runMode || "preview"}`,
+    `Reason: ${report.reason || "(none)"}`,
+  ];
+
+  if (report.overview) {
+    const counts = report.overview.surfaceCounts || {};
+    const highlights = report.overview.highlights || {};
+    lines.push(
+      `Overview health: bridge=${highlights.bridgeLive ? "live" : "offline"} reachable=${highlights.bridgeReachable ? "yes" : "no"} breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"} model_backend=${highlights.modelBackendVisible ? "visible" : "missing"} followup_apply=${highlights.followupApplyVisible ? "present" : "missing"}`
+    );
+    lines.push(
+      `Overview counts: visible=${counts.visible || 0}/${counts.total || 0} commands=${counts.commandCount || 0} groups=${counts.groupCount || 0}`
+    );
+  }
+
+  if (report.execution) {
+    lines.push(
+      `Execution: exitCode=${typeof report.execution.exitCode === "number" ? report.execution.exitCode : "unknown"}`
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function formatOperatorCompact(report) {
+  const overviewCounts = report.overview && report.overview.surfaceCounts ? report.overview.surfaceCounts : {};
+  const highlights = report.overview && report.overview.highlights ? report.overview.highlights : {};
+  const execution = report.execution || null;
+  return [
+    `ok=${report.ok ? "yes" : "no"}`,
+    `kind=${report.kind || "unknown"}`,
+    `mode=${report.runMode || "preview"}`,
+    `next=${report.recommendedCommand || "none"}`,
+    `source=${report.recommendationSource || "unknown"}`,
+    `bridge=${highlights.bridgeLive ? "live" : "offline"}`,
+    `breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"}`,
+    `commands=${overviewCounts.commandCount || 0}`,
+    `groups=${overviewCounts.groupCount || 0}`,
+    execution ? `exitCode=${typeof execution.exitCode === "number" ? execution.exitCode : "unknown"}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function runOperatorRecommendation(report, options = {}) {
+  const commandArgs = buildOperatorInvocationArgs(report, options);
+  if (!commandArgs.length) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "operator_no_recommendation",
+      commandArgs: [],
+    };
+  }
+
+  const result = spawnSync(process.execPath, [MNAIPRO_BIN, ...commandArgs], {
+    cwd: ROOT_DIR,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 20 * 1024 * 1024,
+    env: {
+      ...process.env,
+      ...(options.env || {}),
+    },
+  });
+
+  return {
+    exitCode: typeof result.status === "number" ? result.status : 1,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
+    commandArgs,
+  };
+}
+
+async function handleOperator(program, options = {}) {
+  const report = await buildOperatorReport(program, options);
+
+  if (options.run) {
+    report.execution = runOperatorRecommendation(report, options);
+    if (typeof report.execution.exitCode === "number" && report.execution.exitCode !== 0) {
+      process.exitCode = report.execution.exitCode;
+    }
+  }
+
+  if (options.json) {
+    outputJson(report);
+    return;
+  }
+
+  if (options.compact) {
+    outputText(formatOperatorCompact(report));
+    return;
+  }
+
+  outputText(formatOperatorLines(report));
+
+  if (options.run) {
+    outputText("");
+    outputText(`Launched: ${report.recommendedCommand || "(none)"}`);
+    if (report.execution && report.execution.stdout) {
+      process.stdout.write(report.execution.stdout);
+    }
+    if (report.execution && report.execution.stderr) {
+      process.stderr.write(report.execution.stderr);
+    }
+  }
 }
 
 function formatDoctorLines(report) {
@@ -1715,6 +1958,12 @@ function buildCommandSurfaceDocs(experimentalState = buildExperimentalState(proc
         summary: "Top-level workflow evidence map.",
       },
       {
+        label: "Operator",
+        prefix: "mnaipro",
+        commands: ["operator"],
+        summary: "Thin launcher for the next stable mnaipro command.",
+      },
+      {
         label: "Bridge ops",
         prefix: "mnaipro bridge",
         commands: ["status", "doctor", "render", "reload", "logs"],
@@ -1760,6 +2009,8 @@ function buildCommandSurfaceDocs(experimentalState = buildExperimentalState(proc
 
   const commonFlows = [
     "mnaipro overview --json",
+    "mnaipro operator --json",
+    "mnaipro operator --run --compact",
     "mnaipro bridge doctor",
     "mnaipro bridge reload",
     "mnaipro bridge logs --follow --interval 2",
@@ -1933,6 +2184,7 @@ function buildCapabilitiesReport(program, experimentalState = buildExperimentalS
   const recommendedCommands = [
     "mnaipro overview --json",
     "mnaipro capabilities --json",
+    "mnaipro operator --json",
     "mnaipro status --compact",
     "mnaipro doctor",
     "mnaipro breakdown artifacts --json",
@@ -2905,6 +3157,27 @@ function createProgram() {
       await handleOverview(program, {
         baseUrl: cmd.baseUrl || program.opts().baseUrl,
         obsidianVaultPath: cmd.obsidianVaultPath || program.opts().obsidianVaultPath,
+        json: !!cmd.json || !!program.opts().json,
+        compact: !!cmd.compact || !!program.opts().compact,
+      });
+    });
+
+  program
+    .command("operator")
+    .description("Recommend the next stable mnaipro command, with optional launcher execution.")
+    .option("--base-url <url>", "bridge base URL")
+    .option(
+      "--obsidian-vault-path <path>",
+      "Obsidian vault root used for sync settings evidence"
+    )
+    .option("--run", "execute the recommended stable command")
+    .option("--json", "emit JSON output")
+    .option("--compact", "emit a compact single-line summary")
+    .action(async (cmd) => {
+      await handleOperator(program, {
+        baseUrl: cmd.baseUrl || program.opts().baseUrl,
+        obsidianVaultPath: cmd.obsidianVaultPath || program.opts().obsidianVaultPath,
+        run: !!cmd.run,
         json: !!cmd.json || !!program.opts().json,
         compact: !!cmd.compact || !!program.opts().compact,
       });

@@ -1,25 +1,31 @@
 # Project Status
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
-## Current phase
+## Current state
+- Maintenance-only mode is in effect on `main`; phase 7 release hardening and the phase 8 optional expansion are both complete.
 - Bridge model-backend slice complete and locally verified.
-- Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo now treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
-- The repository now uses a `main`-as-merge-branch model with branch-and-PR support for larger slices, and the next roadmap phase is now optional post-completion expansion rather than mandatory release hardening.
+- Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
+- The repository uses a `main`-as-merge-branch model with branch-and-PR support for larger slices; any future roadmap item is a maintenance slice or a new product slice, not unfinished release hardening.
+- Phase 8 optional expansion is complete on `main`; the `mnaipro operator` launcher and its docs/smoke coverage are in place as the thin top-layer workflow above the stable CLI surfaces.
 - The current `mnaipro` hardening slice closed the Node-side adapter parity gap for `remove_comments_by_text` and added a focused regression to keep it aligned with the stable addon shell.
-- The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are now wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
-- `npm run check:ci` now runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
-- `scripts/check-ci.js` is now itself guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
-- `scripts/check-cli-smoke-portable.js` now guards the missing-sibling-root portable smoke path directly.
-- `npm run cli:smoke:portable` now exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
-- The pull request template now prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
-- `docs/release-process.md` now exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
+- The safe visual-strategy slice now keeps visible stale-color corrections available for salient notes while skipping hidden or deep-offscreen non-summary notes, and the regression suite covers both branches.
+- When the first-pass color surface needs pruning, visible recolors now stay ahead of fresh color suggestions so explicit corrections survive the limit.
+- Fresh visible color suggestions now also stay conservative: if a visible note has no existing color correction need and the shape signal is weak, it is excluded from the first-pass color surface.
+- The gated `mnaipro experimental status`, `mnaipro experimental diagnostics`, and `mnaipro experimental registry` surfaces are wired into the CLI, hidden by default, and exposed only when `MNAIPRO_EXPERIMENTAL=1` is set.
+- `npm run check:ci` runs the full `scripts/check-cli-smoke.js --portable` regression, so the stable CLI surface is covered by an actual smoke run in CI without depending on sibling CLI checkouts.
+- `scripts/check-ci.js` is guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
+- `scripts/check-cli-smoke-portable.js` guards the missing-sibling-root portable smoke path directly.
+- `npm run cli:smoke:portable` exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
+- The pull request template prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
+- `docs/release-process.md` exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
 
 ## What is in place
 - Public GitHub repository exists at `crused-fall/marginnote-aipro`.
 - Local `main` tracks `origin/main`.
 - Repo-specific operating rules live in `AGENTS.md`.
 - Long-term memory now has a dedicated `PROJECT_MEMORY.md`.
+- Thread-level progress now has a dedicated, chronological `PROJECT_LOG.md`.
 - Current phase tracking now has a dedicated `PROJECT_STATUS.md`.
 - GitHub issue templates, pull request template, and CI workflow are in place.
 - Contributor workflow guidance now lives in `CONTRIBUTING.md`, with `CODEOWNERS` for GitHub review routing.
@@ -30,6 +36,8 @@ Last updated: 2026-05-11
 - The `mnaipro capabilities` command now exposes the live command registry and capability groups.
 - The `mnaipro capabilities` command now also exposes the shared `surfaceDocs` catalog used by `mnaipro --help`, so the command-surface help footer and the registry stay in sync.
 - The `mnaipro overview` command now exposes a top-level workflow evidence map across status, doctor, capabilities, and Breakdown.
+- The `mnaipro operator` command now provides a thin launcher for the next stable `mnaipro` command, with JSON, compact, and optional `--run` execution modes that preserve explicit bridge and vault context.
+- The `mnaipro doctor` and `bridge doctor` log tail readers now cap their file reads so very large supervisor logs do not blow up diagnostics.
 - `mnaipro breakdown postprocess` now falls back to the latest apply report's `afterBranch` snapshot when no dedicated Breakdown artifacts exist, so the preview can still inspect a real branch snapshot.
 - `mnaipro breakdown postprocess --live-only` now disables that proxy path, so we can compare true Breakdown artifacts against the proxy baseline without changing the default operator flow.
 - `mnaipro followup latest` and `mnaipro followup apply latest` now surface explicit branch-overview action/fill counts when the second stage comes from `branch_structure_digest`.
@@ -48,11 +56,17 @@ Last updated: 2026-05-11
 - No open GitHub issues remain.
 - The repo is moving toward GitHub issues + PRs as the main collaboration surface.
 
-## Next work
-- If we continue, start phase 8 optional post-completion expansion; otherwise the stable public surfaces are complete and release hardening is done.
+## Maintenance mode
+- No mandatory phase 8 work remains; future changes should be treated as new bugfix slices or new product slices, not as unfinished phase 8 work.
 
 ## Last validated locally
 - `node --check cli/mnaipro.js`
+- `node --check scripts/check-cli-smoke.js`
+- `node --check scripts/bridge-doctor.js`
+- `node --check scripts/check-ci.js`
+- `node scripts/check-cli-smoke.js --portable --json`
+- `npm run check:ci`
+- `npm run check`
 - `node --check bridge/experimental/gate.js`
 - `node --check bridge/experimental/diagnostics.js`
 - `node --check bridge/experimental/registry.js`

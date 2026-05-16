@@ -36,11 +36,31 @@ const LABEL = `gui/${process.getuid()}/com.mnaipro.bridge-supervisor`;
 
 function tailLines(filePath, count) {
   if (!fs.existsSync(filePath)) return [];
-  return fs
-    .readFileSync(filePath, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .slice(-count);
+  const targetCount = Math.max(1, Number(count) || 0);
+  const stat = fs.statSync(filePath);
+  if (!stat.size) return [];
+
+  const maxBytes = Math.min(stat.size, 1024 * 1024);
+  const start = Math.max(0, stat.size - maxBytes);
+  const buffer = Buffer.allocUnsafe(maxBytes);
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, start);
+    let text = buffer.toString("utf8", 0, bytesRead);
+    if (start > 0) {
+      const firstNewline = text.indexOf("\n");
+      if (firstNewline >= 0) {
+        text = text.slice(firstNewline + 1);
+      }
+    }
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean)
+      .slice(-targetCount);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function safeRead(filePath) {

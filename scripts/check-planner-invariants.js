@@ -107,6 +107,159 @@ function buildPureOrganizedEnoughPlan() {
   ]);
 }
 
+function buildVisibleColorCorrectionPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "r-1",
+      title: "Theorem 1",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem 1. A compact theorem statement already exists here.",
+      colorIndex: 3,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 180, y: 120, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+  ]);
+}
+
+function buildHiddenColorCorrectionPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "r-2",
+      title: "Theorem 2",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem 2. A compact theorem statement already exists here.",
+      colorIndex: 3,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: null,
+      visualDepth: 4,
+      visibleInMindMap: false,
+      branchClosed: false,
+      hidden: true,
+      zLevel: null,
+      groupMode: "",
+    },
+  ]);
+}
+
+function buildVisibleColorRetentionPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "a-1",
+      title: "Theorem A",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem A. A compact theorem statement already exists here.",
+      colorIndex: null,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 40, y: 40, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+    {
+      noteId: "b-1",
+      title: "Theorem B",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem B. A compact theorem statement already exists here.",
+      colorIndex: null,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 210, y: 40, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+    {
+      noteId: "c-1",
+      title: "Theorem C",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem C. A compact theorem statement already exists here.",
+      colorIndex: null,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 380, y: 40, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+    {
+      noteId: "z-1",
+      title: "Theorem Z",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem Z. A compact theorem statement already exists here.",
+      colorIndex: 3,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 550, y: 40, width: 160, height: 80 },
+      visualDepth: 1,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+  ]);
+}
+
+function buildVisibleFreshColorSkipPlan() {
+  return buildPlanFromNodes([
+    {
+      noteId: "d-1",
+      title: "Theorem D",
+      tags: [],
+      mainExcerptText: "A compact theorem statement already exists here.",
+      allText: "Theorem D. A compact theorem statement already exists here.",
+      colorIndex: null,
+      fillIndex: null,
+      commentsText: [],
+      childNoteIds: [],
+      parentNoteId: null,
+      visualFrame: { x: 700, y: 40, width: 160, height: 80 },
+      visualDepth: 4,
+      visibleInMindMap: true,
+      branchClosed: false,
+      hidden: false,
+      zLevel: 1,
+      groupMode: "",
+    },
+  ]);
+}
+
 function buildDeferredVisualOnlyStrategyPacks() {
   return buildStrategyPacks(
     [],
@@ -728,6 +881,60 @@ function validateColorPolicy(actions) {
   );
 }
 
+function validateVisibleColorCorrection(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  const recolorAction = actions.find(
+    (action) =>
+      action.type === "set_color_index" &&
+      action.noteId === "r-1" &&
+      action.colorIndex === 4
+  );
+  assert(recolorAction, "visible theorem note with a stale color should be recolored");
+  assert(
+    recolorAction.visualRole === "theorem",
+    `unexpected recolor visual role: ${recolorAction.visualRole}`
+  );
+  assert(
+    recolorAction.meta &&
+      Array.isArray(recolorAction.meta.evidence) &&
+      recolorAction.meta.evidence.some(
+        (item) => /current color index 3|当前颜色索引 3/i.test(item)
+      ),
+    "visible recolor should explain the stale current color in its evidence"
+  );
+}
+
+function validateHiddenColorSkip(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  assert(
+    !actions.some((action) => action.type === "set_color_index"),
+    "hidden note should not receive a color correction"
+  );
+}
+
+function validateVisibleColorRetention(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  const retainedRecolor = actions.find(
+    (action) => action.type === "set_color_index" && action.noteId === "z-1"
+  );
+  assert(
+    retainedRecolor,
+    "visible recolor note should survive pruning ahead of fresh color suggestions"
+  );
+  assert(
+    actions.filter((action) => action.type === "set_color_index").length === 3,
+    "visible recolor regression should still prune the set down to the primary limit"
+  );
+}
+
+function validateVisibleFreshColorSkip(plan) {
+  const actions = Array.isArray(plan.actions) ? plan.actions : [];
+  assert(
+    !actions.some((action) => action.type === "set_color_index" && action.noteId === "d-1"),
+    "deep visible note without an existing color should stay out of the first-pass color surface"
+  );
+}
+
 function validateStrategyPacks(plan) {
   const strategyPacks = Array.isArray(plan.strategyPacks) ? plan.strategyPacks : [];
   const actionKeys = new Set((plan.actions || []).map((action) => action.actionKey));
@@ -883,6 +1090,10 @@ function validateFollowupGroupedDigestSuppression(plan) {
 
 function main() {
   const plan = buildSamplePlan();
+  const visibleRecolorPlan = buildVisibleColorCorrectionPlan();
+  const hiddenRecolorPlan = buildHiddenColorCorrectionPlan();
+  const visibleRetentionPlan = buildVisibleColorRetentionPlan();
+  const visibleFreshSkipPlan = buildVisibleFreshColorSkipPlan();
   const semanticDeferredPlan = buildSemanticDeferredOnlyPlan();
   const pureOrganizedEnoughPlan = buildPureOrganizedEnoughPlan();
   const visualDeferredOnlyPacks = buildDeferredVisualOnlyStrategyPacks();
@@ -901,6 +1112,10 @@ function main() {
   validateCounts(plan);
   validateUnsupported(unsupportedActions);
   validateColorPolicy(actions);
+  validateVisibleColorCorrection(visibleRecolorPlan);
+  validateHiddenColorSkip(hiddenRecolorPlan);
+  validateVisibleColorRetention(visibleRetentionPlan);
+  validateVisibleFreshColorSkip(visibleFreshSkipPlan);
   validateStrategyPacks(plan);
   validateOrganizedEnoughPack(semanticDeferredPlan, {
     rootNoteId: "s-1",
