@@ -77,8 +77,9 @@ Canonical long-term memory for this repository.
 
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
-- The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: refine first-pass color ranking and pruning only when a regression or smoke case shows a concrete gap.
-- That polish now also includes preview ordering for color actions, so retained recolors appear before fresh suggestions instead of being buried by note order.
+- Prioritize stability/compatibility hardening, code-review sweeps, and small bug-fix slices before any further feature-style polish.
+- The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
+- That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
 - Keep docs and release hygiene aligned when a user-visible change lands, especially the status/memory/log trio plus `README.md` and `docs/mnaipro-cli-quickref.md`.
 - Keep product-line and GitHub remote boundaries explicit across the three repos.
@@ -97,7 +98,7 @@ Canonical long-term memory for this repository.
 
 ## Prioritized backlog
 1. Preserve the maintenance-only boundary first: update status, memory, and log together whenever anything changes.
-2. Finish any safe visual-strategy polish still needed for `mnaipro`, especially broader visual styling and color-policy quality.
+2. Run stability, compatibility, and bug-fix sweeps on the most recently touched surfaces before any further feature-style polish.
 3. Decide whether a future experimental slice should expose deeper structural edits beyond note-local writes.
 4. Preserve the standalone product-line separation and avoid new hidden cross-repo coupling.
 5. Keep validation, changelog, and release documentation in lockstep.

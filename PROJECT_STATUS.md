@@ -22,8 +22,8 @@ Last updated: 2026-05-16
 - `docs/release-process.md` exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
 
 ## Next work candidates
-- The highest-leverage remaining code slice is conservative `mnaipro` visual-strategy polish: keep refining first-pass color ranking and pruning only when a concrete regression or smoke case shows a real gap.
-- That visual-strategy polish now also keeps the preview ordering aligned with the correction-first ranking, so future work can stay on deeper shape heuristics rather than re-litigating action order.
+- Stability/compatibility hardening, code-review sweeps, and bug-fix slices now outrank any further feature-style polishing.
+- The conservative `mnaipro` visual-strategy work stays available only when a concrete regression or compatibility issue points there.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 
