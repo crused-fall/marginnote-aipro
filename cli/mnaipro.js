@@ -1101,7 +1101,7 @@ async function handleStatus(options) {
     const supervisorState = payload.supervisorState || null;
     const modelBackendState = payload.modelBackend || null;
     outputText(
-      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
+      `bridge=${payload.service || "unknown"} source=${payload.source || statusInfo.source}${formatBridgeOfflineReasonHint(payload)} queue=${payload.queueDepth ?? "?"} latest_plan=${payload.latest?.plan?.requestId || "none"} followup_apply=${payload.latestFollowupApply ? 1 : 0} followup_apply_request=${followupApplyRequest} bridge_supervisor=${supervisorState ? supervisorState.ownership || "unknown" : "none"} bridge_supervisor_pid=${supervisorState && supervisorState.bridgePid ? supervisorState.bridgePid : "none"} model_backend=${modelBackendState ? `${modelBackendState.provider?.type || "unknown"}:${modelBackendState.configured ? (modelBackendState.available ? "ready" : "configured") : "disabled"}` : "missing"} breakdown=${payload.breakdownArtifacts ? payload.breakdownArtifacts.status || "unknown" : "unknown"} next=${payload.breakdownNextCommand} obsidian_settings=${payload.obsidianSyncSettings && payload.obsidianSyncSettings.exists ? "present" : "missing"}`
     );
     return;
   }
@@ -1140,6 +1140,17 @@ function buildStatusReport(statusInfo, obsidianVaultPath) {
     payload.modelBackend = modelBackend;
   }
   return payload;
+}
+
+function formatBridgeOfflineReasonHint(report) {
+  const reason = compactText(
+    (report && report.bridgeOfflineReason) ||
+      (report && report.status && report.status.bridgeOfflineReason) ||
+      (report && report.doctor && report.doctor.bridgeOfflineReason) ||
+      ""
+  );
+  if (!reason) return "";
+  return ` bridge_offline_reason=${reason}`;
 }
 
 async function buildDoctorSummary(baseUrl, obsidianVaultPath, statusInfo = null) {
@@ -1786,12 +1797,14 @@ function formatOverviewLines(report) {
 function formatOverviewCompact(report) {
   const counts = report.surfaceCounts || {};
   const highlights = report.highlights || {};
+  const offlineHint = formatBridgeOfflineReasonHint(report);
   return [
     `ok=${report.ok ? "yes" : "no"}`,
     `kind=${report.kind || "unknown"}`,
     `visible=${counts.visible || 0}/${counts.total || 0}`,
     `bridge=${highlights.bridgeLive ? "live" : "offline"}`,
     `reachable=${highlights.bridgeReachable ? "yes" : "no"}`,
+    ...(offlineHint ? [offlineHint.trim()] : []),
     `breakdown=${highlights.breakdownComplete ? "complete" : "incomplete"}`,
     `model_backend=${highlights.modelBackendVisible ? "visible" : "missing"}`,
     `commands=${counts.commandCount || 0}`,

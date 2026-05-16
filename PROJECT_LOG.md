@@ -64,6 +64,8 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - A concrete `MAINTENANCE_BACKLOG.md` file was added so the automation has a specific low-risk task list to inspect instead of only broad maintenance principles.
 - `mnaipro overview` was then made internally consistent by reusing a single bridge-status probe for both the top-level status report and the nested doctor report, so a transient `/status` failure cannot make one overview contradict itself.
 - `scripts/check-cli-overview-consistency.js` was added as a focused regression that simulates a successful first `/status` probe followed by a transient failure, keeping the single-probe invariant covered by CI-safe checks.
+- Compact `mnaipro status`, `mnaipro bridge status`, and `mnaipro overview` output now surface `bridge_offline_reason` when the bridge falls back locally, so the fallback cause is visible without opening JSON.
+- `README.md` and `docs/mnaipro-cli-quickref.md` were updated to describe that new offline-fallback hint in the compact surface documentation.
 
 ## Thread Index
 

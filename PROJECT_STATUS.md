@@ -18,6 +18,7 @@ Last updated: 2026-05-16
 - `scripts/check-ci.js` is guarded by `scripts/check-ci-orchestrator.js`, which keeps the portable smoke decision explicit.
 - `scripts/check-cli-smoke-portable.js` guards the missing-sibling-root portable smoke path directly.
 - `npm run cli:smoke:portable` exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
+- Compact `mnaipro status`, `mnaipro bridge status`, and `mnaipro overview` output now surfaces `bridge_offline_reason` when the bridge falls back locally.
 - The pull request template prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
 - `docs/release-process.md` exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
 
@@ -25,7 +26,7 @@ Last updated: 2026-05-16
 - Stability/compatibility hardening, UI/usability refinements, code-review sweeps, and bug-fix slices now outrank any further feature-style polishing.
 - The conservative `mnaipro` visual-strategy work stays available only when a concrete regression, compatibility issue, or UI regression points there.
 - The concrete maintenance task list now lives in `MAINTENANCE_BACKLOG.md`, so automated check-ins have an explicit task source instead of only broad principles.
-- A likely next maintenance slice is to surface `bridgeOfflineReason` directly in compact `mnaipro status` / `mnaipro overview` output when the bridge falls back locally.
+- A likely next maintenance slice is to decide whether `mnaipro doctor --compact` should also mirror the new `bridge_offline_reason` hint for parity.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 

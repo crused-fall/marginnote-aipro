@@ -424,6 +424,7 @@ npm run bridge:doctor
 That doctor report now also carries the Obsidian sync settings summary and expected `data.json` path when the local vault is available.
 It also carries the bridge supervisor ownership state when that lifecycle state file exists, so you can see whether the bridge is spawned, adopted, external, or stopped.
 The compact `mnaipro doctor --compact` and `mnaipro status --compact` forms now mirror that ownership as `bridge_supervisor=...` plus `bridge_supervisor_pid=...`.
+When the bridge falls back locally, the compact `mnaipro status --compact`, `mnaipro bridge status --compact`, and `mnaipro overview --compact` forms also surface `bridge_offline_reason=...` so the fallback cause stays visible without opening JSON.
 Use `mnaipro doctor --obsidian-vault-path <path>` or `MN_OBSIDIAN_VAULT_PATH` if you need to point those diagnostics at a different vault.
 
 Inspect the latest preview plan artifact with execution tiers and phases:

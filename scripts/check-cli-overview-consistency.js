@@ -112,6 +112,47 @@ async function main() {
       "overview should keep the bridge-live highlight aligned with the shared status probe"
     );
 
+    const offlineBaseUrl = "http://127.0.0.1:1";
+    const offlineStatusCompact = await runCli([
+      "--base-url",
+      offlineBaseUrl,
+      "--obsidian-vault-path",
+      tempVaultPath,
+      "status",
+      "--compact",
+    ]);
+    assert.strictEqual(
+      offlineStatusCompact.code,
+      0,
+      `status compact should still complete when the bridge falls back locally\n${offlineStatusCompact.stderr || offlineStatusCompact.stdout}`
+    );
+    assert(
+      /bridge=mn-agent-bridge/.test(offlineStatusCompact.stdout || "") &&
+        /source=local_fallback/.test(offlineStatusCompact.stdout || "") &&
+        /bridge_offline_reason=/.test(offlineStatusCompact.stdout || ""),
+      `status compact should surface the fallback reason\n${offlineStatusCompact.stdout}`
+    );
+
+    const offlineOverviewCompact = await runCli([
+      "--base-url",
+      offlineBaseUrl,
+      "--obsidian-vault-path",
+      tempVaultPath,
+      "overview",
+      "--compact",
+    ]);
+    assert.strictEqual(
+      offlineOverviewCompact.code,
+      0,
+      `overview compact should still complete when the bridge falls back locally\n${offlineOverviewCompact.stderr || offlineOverviewCompact.stdout}`
+    );
+    assert(
+      /bridge=offline/.test(offlineOverviewCompact.stdout || "") &&
+        /reachable=no/.test(offlineOverviewCompact.stdout || "") &&
+        /bridge_offline_reason=/.test(offlineOverviewCompact.stdout || ""),
+      `overview compact should surface the fallback reason\n${offlineOverviewCompact.stdout}`
+    );
+
     process.stdout.write("CLI overview consistency checks OK\n");
   } finally {
     await new Promise((resolve) => server.close(resolve));
