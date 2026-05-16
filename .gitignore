@@ -1,5 +1,7 @@
 node_modules/
 tmp/
+.worktrees/
+worktrees/
 *.mnaddon
 .DS_Store
 npm-debug.log*

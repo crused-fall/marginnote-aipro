@@ -1,13 +1,16 @@
 # Release Process
 
 This repository ships releases through the `release-addon` GitHub workflow and keeps user-visible release notes in `CHANGELOG.md`.
+Routine maintenance slices should follow `docs/maintenance-operations.md` first so the release preflight, docs, and durable records all stay aligned.
 
 ## Before a release
 
 1. Update `CHANGELOG.md` with the user-visible changes you want in the next release.
-2. Run `npm run check:ci` to confirm the CI-safe gate is green.
-3. Run `npm run addon:build` to produce a local `.mnaddon` package.
-4. If the change is broader than a small fix, keep it on a branch and open a draft PR before merging.
+2. If you are landing a maintenance slice on `main`, follow `docs/maintenance-operations.md` before you publish it.
+3. Run `npm run check:ci` to confirm the CI-safe gate is green.
+4. Run `npm run check` when the change touched stable behavior or operator guidance.
+5. Run `npm run addon:build` to produce a local `.mnaddon` package.
+6. If the change is broader than a small fix, keep it on a branch and open a draft PR before merging.
 
 ## Publish paths
 
@@ -28,5 +31,6 @@ This repository ships releases through the `release-addon` GitHub workflow and k
 - `npm run check:ci`
 - `npm run check`
 - `npm run addon:build`
+- For maintenance slices, the runbook in `docs/maintenance-operations.md` defines when `npm run check` is expected in addition to `npm run check:ci`.
 
 The release process intentionally stays preview-first for checks and only packages from source once the verification gates are green.

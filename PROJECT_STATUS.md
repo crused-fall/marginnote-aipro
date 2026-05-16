@@ -4,6 +4,9 @@ Last updated: 2026-05-16
 
 ## Current state
 - Maintenance-only mode is in effect on `main`; phase 7 release hardening and the phase 8 optional expansion are both complete.
+- The long-term maintenance operating model is documented in `docs/maintenance-operations.md`, and `MAINTENANCE_BACKLOG.md` stays as the short queue for heartbeat selection.
+- `docs/release-process.md` now points routine maintenance slices at the same runbook, so the maintenance cadence and release preflight use one documented path.
+- The runbook now has an explicit compact UI review checklist, and `CONTRIBUTING.md` routes maintenance slices through the same backlog and guidance.
 - Bridge model-backend slice complete and locally verified.
 - Phase 7 release hardening is complete on `main`; PR #4 has been merged and the repo treats the release checklist, changelog, and CI-safe smoke path as the canonical public release surface.
 - The repository uses a `main`-as-merge-branch model with branch-and-PR support for larger slices; any future roadmap item is a maintenance slice or a new product slice, not unfinished release hardening.
@@ -20,13 +23,14 @@ Last updated: 2026-05-16
 - `npm run cli:smoke:portable` exists as an explicit local entrypoint for the portable smoke path, and `scripts/check-cli-smoke.js --help` documents the portable fallback and checkout override flags.
 - Compact `mnaipro status`, `mnaipro bridge status`, `mnaipro doctor`, and `mnaipro overview` output now surfaces `bridge_offline_reason` when the bridge falls back locally.
 - The pull request template prompts for `CHANGELOG.md` updates when behavior changes, so release-related PRs keep the note trail visible at review time.
-- `docs/release-process.md` exists as the canonical release checklist, so the release path is documented in one place instead of being scattered across README and contributor notes.
+- `docs/release-process.md` exists as the canonical release checklist, and it now references the maintenance runbook for routine slices so the release path and the maintenance cadence stay in sync.
 
 ## Next work candidates
 - Stability/compatibility hardening, UI/usability refinements, code-review sweeps, and bug-fix slices now outrank any further feature-style polishing.
 - The conservative `mnaipro` visual-strategy work stays available only when a concrete regression, compatibility issue, or UI regression points there.
 - The concrete maintenance task list now lives in `MAINTENANCE_BACKLOG.md`, so automated check-ins have an explicit task source instead of only broad principles.
-- The previous `mnaipro doctor --compact` parity gap is now closed; the next low-risk maintenance slices are docs wording consistency and record drift checks.
+- The previous `mnaipro doctor --compact` parity gap is now closed; the next low-risk maintenance slices come from the runbook-backed backlog and stay focused on docs wording consistency, verification coverage, and record drift checks.
+- Compact UI/stability reviews should compare `mnaipro doctor --compact`, `mnaipro status --compact`, `mnaipro bridge doctor --compact`, `mnaipro bridge status --compact`, and `mnaipro overview --compact` side by side.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should stay isolated from the stable surfaces and get its own verification surface.
 - Any user-visible change should keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and `docs/mnaipro-cli-quickref.md` aligned in the same change.
 

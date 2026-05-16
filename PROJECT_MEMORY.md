@@ -16,6 +16,7 @@ Canonical long-term memory for this repository.
 - Small, verified fixes can go straight to `main`.
 - Medium and larger slices should use a short-lived branch and Draft PR.
 - The repository is in maintenance-only mode on `main`; phase 7 and phase 8 are complete.
+- The long-term maintenance operating model lives in `docs/maintenance-operations.md`; `MAINTENANCE_BACKLOG.md` is the short queue, not the source of truth.
 - Long-term target state belongs in `PROJECT_MEMORY.md`.
 - Current phase / milestone tracking belongs in `PROJECT_STATUS.md`.
 - Repo-specific operating rules belong in `AGENTS.md`.
@@ -54,6 +55,8 @@ Canonical long-term memory for this repository.
 - `scripts/check-release-addon-workflow.js` now also asserts that `CHANGELOG.md` has an `Unreleased` section and that the release docs point at it, so the release-note entrypoint stays coupled to the workflow check.
 - The pull request template now prompts contributors to update `CHANGELOG.md` when user-visible behavior changes, keeping release notes and review checklists aligned.
 - `docs/release-process.md` now captures the canonical release checklist and publish paths, and the release workflow check asserts that it keeps the changelog, validation commands, and publish triggers in sync.
+- `docs/release-process.md` now points routine maintenance slices at `docs/maintenance-operations.md`, so the release checklist and the maintenance cadence use the same documented preflight.
+- `docs/maintenance-operations.md` now includes an explicit compact UI/operator review checklist, and `CONTRIBUTING.md` routes routine maintenance slices through that runbook and backlog.
 - Phase 7 release hardening is complete on `main` after PR #4 merged; the stable public release path now explicitly centers `CHANGELOG.md`, `docs/release-process.md`, the PR checklist, and the CI-safe smoke gate.
 - Phase 8 optional expansion completed with `mnaipro operator` as a thin launcher layer above the stable CLI surfaces, not as a hidden dependency inside them.
 - `.mnaddon` archives are generated locally from source and should not be tracked in git.
@@ -79,6 +82,7 @@ Canonical long-term memory for this repository.
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
 - Prioritize stability/compatibility hardening, UI/usability improvements, code-review sweeps, and small bug-fix slices before any further feature-style polish.
+- Read `docs/maintenance-operations.md` first, then `MAINTENANCE_BACKLOG.md`; the runbook sets the cadence, priority order, and record-sync rules.
 - When safe maintenance work exists, the heartbeat should stay in a sustained work block for at least 10 minutes, preferably 15-20 minutes or more, before stopping, unless it has already completed and verified a concrete safe slice.
 - Read `MAINTENANCE_BACKLOG.md` after the durable records and before deciding on a task; it contains the explicit low-risk maintenance checks the heartbeat should prefer.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
@@ -96,10 +100,13 @@ Canonical long-term memory for this repository.
 
 ## Maintenance backlog
 - The explicit maintenance task list lives in `MAINTENANCE_BACKLOG.md`.
+- The durable maintenance policy lives in `docs/maintenance-operations.md`, and the backlog should stay short enough to support a quick heartbeat decision.
 - Keep `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `PROJECT_LOG.md`, `README.md`, and the quick reference aligned whenever shipped behavior or the maintenance boundary changes.
 - Keep the three product lines isolated: `mnaipro`, `marginnote-cli`, and `mn-obsidian-bridge`.
 - Keep the CI-safe validation ladder green, especially `npm run check:ci` and `npm run check`, and rerun the narrow smoke checks after documentation or behavior changes.
 - Keep `CHANGELOG.md` updated for user-visible changes and keep generated artifacts out of version control.
+- Keep `docs/release-process.md` and `docs/maintenance-operations.md` aligned so the tagged-release path and the maintenance preflight do not diverge.
+- Keep the compact UI surfaces aligned by reviewing `mnaipro doctor/status/overview` and bridge counterparts side by side when a maintenance slice touches wording or hints.
 - Keep archived planning docs clearly historical so they do not read like active work items.
 
 ## Prioritized backlog

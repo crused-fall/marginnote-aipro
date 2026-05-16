@@ -66,6 +66,11 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - `scripts/check-cli-overview-consistency.js` was added as a focused regression that simulates a successful first `/status` probe followed by a transient failure, keeping the single-probe invariant covered by CI-safe checks.
 - Compact `mnaipro status`, `mnaipro bridge status`, `mnaipro doctor`, and `mnaipro overview` output now surface `bridge_offline_reason` when the bridge falls back locally, so the fallback cause is visible without opening JSON.
 - The compact offline-reason hint was then extended to `mnaipro doctor --compact` as well, and the CLI docs plus smoke coverage were updated to keep that parity locked in.
+- The long-term maintenance operating model was then codified in `docs/maintenance-operations.md`, so the automation-first cadence, priority order, and record-sync rules now live in a durable runbook.
+- `MAINTENANCE_BACKLOG.md` was tightened again so it stays a short queue of concrete checks, and the README now points maintainers at the runbook instead of leaving the process implicit.
+- `docs/mnaipro-cli-quickref.md` and `docs/bridge-ops-quickstart.md` now point at the same runbook too, so the maintenance guidance is visible from the CLI quickref and bridge quickstart as well as the README.
+- `docs/release-process.md` and `CHANGELOG.md` were then brought into the same maintenance-preflight story, so release notes, release checks, and the runbook now tell one consistent story about when to run `npm run check` and `npm run addon:build`.
+- The maintenance runbook was then extended with an explicit compact UI/operator review checklist, and `CONTRIBUTING.md` now routes routine maintenance slices through that same runbook and backlog.
 
 ## Thread Index
 

@@ -1,6 +1,7 @@
 # Bridge Ops Quickstart
 
 This repo runs the planning bridge as a local macOS user agent, supervised by a small Node process.
+If you are doing routine maintenance rather than active bridge recovery, start with `docs/maintenance-operations.md` and use `MAINTENANCE_BACKLOG.md` as the short queue of concrete checks.
 
 ## Deployment model
 

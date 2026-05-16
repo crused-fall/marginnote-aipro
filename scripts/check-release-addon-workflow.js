@@ -6,6 +6,7 @@ const ROOT_DIR = path.resolve(__dirname, "..");
 const WORKFLOW_PATH = path.join(ROOT_DIR, ".github", "workflows", "release-addon.yml");
 const PR_TEMPLATE_PATH = path.join(ROOT_DIR, ".github", "pull_request_template.md");
 const RELEASE_PROCESS_PATH = path.join(ROOT_DIR, "docs", "release-process.md");
+const MAINTENANCE_OPERATIONS_PATH = path.join(ROOT_DIR, "docs", "maintenance-operations.md");
 const CHANGELOG_PATH = path.join(ROOT_DIR, "CHANGELOG.md");
 const README_PATH = path.join(ROOT_DIR, "README.md");
 const CONTRIBUTING_PATH = path.join(ROOT_DIR, "CONTRIBUTING.md");
@@ -14,6 +15,7 @@ function main() {
   const yaml = fs.readFileSync(WORKFLOW_PATH, "utf8");
   const prTemplate = fs.readFileSync(PR_TEMPLATE_PATH, "utf8");
   const releaseProcess = fs.readFileSync(RELEASE_PROCESS_PATH, "utf8");
+  const maintenanceOperations = fs.readFileSync(MAINTENANCE_OPERATIONS_PATH, "utf8");
   const changelog = fs.readFileSync(CHANGELOG_PATH, "utf8");
   const readme = fs.readFileSync(README_PATH, "utf8");
   const contributing = fs.readFileSync(CONTRIBUTING_PATH, "utf8");
@@ -57,11 +59,25 @@ function main() {
   );
   assert(
     releaseProcess.includes("npm run check:ci") &&
+      releaseProcess.includes("npm run check") &&
       releaseProcess.includes("npm run addon:build") &&
       releaseProcess.includes("CHANGELOG.md") &&
+      releaseProcess.includes("docs/maintenance-operations.md") &&
       releaseProcess.includes("workflow_dispatch") &&
       releaseProcess.includes("v*"),
     "docs/release-process.md should describe the release checks and publish paths"
+  );
+  assert(
+    maintenanceOperations.includes("UI / operator review") &&
+      maintenanceOperations.includes("mnaipro doctor --compact") &&
+      maintenanceOperations.includes("bridge_offline_reason"),
+    "docs/maintenance-operations.md should spell out the compact UI review checklist"
+  );
+  assert(
+    contributing.includes("docs/maintenance-operations.md") &&
+      contributing.includes("MAINTENANCE_BACKLOG.md") &&
+      contributing.includes("workflow/operator guidance"),
+    "CONTRIBUTING.md should route maintenance slices through the runbook and backlog"
   );
 
   process.stdout.write("Release workflow checks OK\n");
