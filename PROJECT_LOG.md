@@ -59,7 +59,8 @@ This log is sorted by time first, then by thread. `019e1913-1b3c-7a32-8cd7-5b7c4
 - The visual-strategy slice was then advanced a little further: color-action ordering now surfaces retained recolors before fresh suggestions, while summary-branch colors still stay first.
 - The automation focus then pivoted from feature-style polish toward stabilization, compatibility checks, code-review sweeps, and bug-fix work so later check-ins can prefer maintenance first.
 - The maintenance priority was then broadened to include UI improvements and usability work so automated check-ins can also pick up clarity and friction-reduction fixes.
-- The heartbeat policy was also clarified to prefer sustained maintenance blocks of roughly 10 minutes when safe work exists, instead of stopping after only a cursory scan.
+- The heartbeat policy was also clarified to prefer sustained maintenance blocks of at least 10 minutes, ideally 15-20 minutes or more, when safe work exists instead of stopping after only a cursory scan.
+- The heartbeat interval was then shortened from 45 minutes to 37 minutes so maintenance-oriented check-ins can land a bit more frequently.
 
 ## Thread Index
 
