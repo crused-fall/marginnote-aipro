@@ -78,6 +78,7 @@ Canonical long-term memory for this repository.
 ## Automation-facing next slices
 - The heartbeat automation should read this section first before choosing work.
 - Prioritize stability/compatibility hardening, UI/usability improvements, code-review sweeps, and small bug-fix slices before any further feature-style polish.
+- When safe maintenance work exists, the heartbeat should stay in a sustained work block and target roughly 10 minutes of focused effort before stopping, unless it has already completed and verified a concrete safe slice.
 - The conservative `mnaipro` visual-strategy polish remains a fallback only when a regression or smoke case shows a concrete gap.
 - That polish still keeps preview ordering for color actions aligned with the correction-first ranking, so retained recolors appear before fresh suggestions instead of being buried by note order.
 - A future experimental slice could expose deeper structural edits beyond note-local writes, but it should remain a separate track with its own verification surface.
